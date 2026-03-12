@@ -1,34 +1,21 @@
 "use client"
 
+import * as React from "react"
 import {
-  ArrowRight,
-  Building2,
   ChevronDown,
-  CircleDollarSign,
   CreditCard,
   HandCoins,
   LayoutGrid,
   Package2,
-  Plus,
-  Receipt,
-  Search,
-  Users,
   Wallet,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
+import { Card } from "@/components/ui/card"
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -61,6 +48,8 @@ const businesses = [
   },
 ]
 
+// Dashboard sections kept here for later re-enable.
+/*
 const overviewCards = [
   {
     label: "Today sales",
@@ -111,12 +100,6 @@ const quickActions = [
   },
 ]
 
-const lowStockItems = [
-  { name: "Coke Mismo", stock: "3 bottles", category: "Drinks" },
-  { name: "Lucky Me Pancit Canton", stock: "5 packs", category: "Noodles" },
-  { name: "555 Sardines", stock: "2 cans", category: "Canned Goods" },
-]
-
 const recentTransactions = [
   {
     id: "TXN-1032",
@@ -140,6 +123,7 @@ const recentTransactions = [
     time: "9:10 AM",
   },
 ]
+*/
 
 const navItems = [
   { label: "Home", icon: LayoutGrid, active: true },
@@ -149,25 +133,67 @@ const navItems = [
   { label: "Payroll", icon: Wallet, active: false },
 ]
 
-function BusinessSwitcher() {
-  const activeBusiness = businesses.find((business) => business.active) ?? businesses[0]
+type BusinessSelectorProps = {
+  selectedBusinessId: string
+  onSelect: (id: string) => void
+}
+
+function BusinessSelectorLabel({
+  business,
+}: {
+  business: (typeof businesses)[number]
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="truncate text-sm font-medium">{business.name}</p>
+      <p className="text-xs text-muted-foreground">
+        {business.type} • {business.location}
+      </p>
+    </div>
+  )
+}
+
+function BusinessSelectorTrigger({
+  business,
+  className,
+  ...props
+}: {
+  business: (typeof businesses)[number]
+  className?: string
+} & React.ComponentProps<typeof Button>) {
+  return (
+    <Button
+      variant="outline"
+      className={cn("h-auto justify-between px-3 py-2", className)}
+      type="button"
+      {...props}
+    >
+      <div className="flex w-full min-w-0 items-center justify-between gap-3 text-left">
+        <BusinessSelectorLabel business={business} />
+        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+      </div>
+    </Button>
+  )
+}
+
+function MobileBusinessSwitcher({
+  selectedBusinessId,
+  onSelect,
+}: BusinessSelectorProps) {
+  const activeBusiness =
+    businesses.find((business) => business.id === selectedBusinessId) ??
+    businesses[0]
 
   return (
     <Sheet>
-      <SheetTrigger render={<Button variant="outline" className="h-auto px-3 py-2" />}>
-        <div className="flex items-center gap-3 text-left">
-          <div className="bg-primary/10 text-primary flex size-9 items-center justify-center border border-primary/20">
-            <Building2 className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{activeBusiness.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {activeBusiness.type} • {activeBusiness.location}
-            </p>
-          </div>
-          <ChevronDown className="size-4 text-muted-foreground" />
-        </div>
-      </SheetTrigger>
+      <SheetTrigger
+        render={
+          <BusinessSelectorTrigger
+            business={activeBusiness}
+            className="w-full sm:w-[22rem] xl:w-[24rem]"
+          />
+        }
+      />
       <SheetContent side="bottom" className="max-h-[85svh] gap-0 border-t">
         <SheetHeader className="border-b">
           <SheetTitle>Businesses</SheetTitle>
@@ -177,25 +203,35 @@ function BusinessSwitcher() {
         </SheetHeader>
         <div className="grid gap-3 p-4">
           {businesses.map((business) => (
-            <Card
+            <SheetClose
               key={business.id}
-              className={cn(
-                "gap-0 p-4",
-                business.active && "border-primary bg-primary/5"
-              )}
+              render={<button type="button" className="text-left" />}
+              onClick={() => onSelect(business.id)}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">{business.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {business.type} • {business.location}
-                  </p>
+              <Card
+                className={cn(
+                  "gap-0 p-4",
+                  business.id === selectedBusinessId &&
+                    "border-primary bg-primary/5"
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{business.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {business.type} • {business.location}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      business.id === selectedBusinessId ? "success" : "outline"
+                    }
+                  >
+                    {business.id === selectedBusinessId ? "Active" : "Switch"}
+                  </Badge>
                 </div>
-                <Badge variant={business.active ? "success" : "outline"}>
-                  {business.active ? "Active" : "Switch"}
-                </Badge>
-              </div>
-            </Card>
+              </Card>
+            </SheetClose>
           ))}
         </div>
       </SheetContent>
@@ -203,9 +239,96 @@ function BusinessSwitcher() {
   )
 }
 
+function DesktopBusinessSwitcher({
+  selectedBusinessId,
+  onSelect,
+}: BusinessSelectorProps) {
+  const [open, setOpen] = React.useState(false)
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const activeBusiness =
+    businesses.find((business) => business.id === selectedBusinessId) ??
+    businesses[0]
+
+  React.useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown)
+    document.addEventListener("keydown", handleKeyDown)
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [])
+
+  return (
+    <div ref={containerRef} className="relative hidden md:block">
+      <BusinessSelectorTrigger
+        business={activeBusiness}
+        className="w-[22rem] xl:w-[24rem]"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      />
+      {open ? (
+        <div className="border-border bg-popover absolute top-full left-0 z-20 mt-2 w-[22rem] border shadow-sm xl:w-[24rem]">
+          <div className="grid gap-2 p-2">
+            {businesses.map((business) => (
+              <button
+                key={business.id}
+                type="button"
+                onClick={() => {
+                  onSelect(business.id)
+                  setOpen(false)
+                }}
+                className={cn(
+                  "hover:bg-muted text-left transition-colors",
+                  business.id === selectedBusinessId && "bg-primary/5"
+                )}
+              >
+                <Card
+                  className={cn(
+                    "gap-0 p-4",
+                    business.id === selectedBusinessId && "border-primary"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{business.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {business.type} • {business.location}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        business.id === selectedBusinessId ? "success" : "outline"
+                      }
+                    >
+                      {business.id === selectedBusinessId ? "Active" : "Switch"}
+                    </Badge>
+                  </div>
+                </Card>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function MobileBottomNav() {
   return (
-    <div className="border-border bg-background/95 fixed inset-x-0 bottom-0 z-20 border-t backdrop-blur md:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-5">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -230,24 +353,25 @@ function MobileBottomNav() {
 }
 
 export function HomeShell() {
+  const [selectedBusinessId, setSelectedBusinessId] = React.useState(
+    businesses[0].id
+  )
+
   return (
-    <div className="bg-background min-h-svh">
-      <header className="bg-background/95 sticky top-0 z-10 border-b backdrop-blur">
-        <div className="flex w-full flex-col gap-4 px-4 py-4 md:px-6 lg:px-8">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                Paldo
-              </p>
-              <h1 className="text-lg font-medium">Business at a glance</h1>
+    <div className="min-h-svh bg-background">
+      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
+        <div className="px-4 py-4 md:px-6 lg:px-8">
+          <div className="md:flex md:items-center md:justify-between">
+            <div className="md:hidden">
+              <MobileBusinessSwitcher
+                selectedBusinessId={selectedBusinessId}
+                onSelect={setSelectedBusinessId}
+              />
             </div>
-            <Button size="sm" className="hidden md:inline-flex">
-              <Plus className="size-4" />
-              Quick add
-            </Button>
-          </div>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <BusinessSwitcher />
+            <DesktopBusinessSwitcher
+              selectedBusinessId={selectedBusinessId}
+              onSelect={setSelectedBusinessId}
+            />
             <div className="hidden items-center gap-2 md:flex">
               {navItems.map((item) => (
                 <Button
@@ -264,158 +388,7 @@ export function HomeShell() {
         </div>
       </header>
 
-      <main className="flex w-full flex-col gap-4 px-4 py-4 pb-24 md:px-6 md:pb-8 lg:px-8">
-        <Card className="overflow-hidden">
-          <CardHeader className="gap-3">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <Badge variant="secondary" className="w-fit">
-                  Phase 0 frontend
-                </Badge>
-                <CardTitle className="text-base">
-                  Home screen only for now
-                </CardTitle>
-                <CardDescription className="max-w-xl text-pretty">
-                  Auth, real business switching, and module navigation are not wired yet.
-                  This shell uses dummy data and the current light theme tokens from
-                  `globals.css`.
-                </CardDescription>
-              </div>
-              <Button size="sm" className="hidden sm:inline-flex">
-                Open POS
-                <ArrowRight className="size-4" />
-              </Button>
-            </div>
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                aria-label="Search"
-                placeholder="Search products, employees, or customers"
-                className="pl-8"
-              />
-            </div>
-          </CardHeader>
-        </Card>
-
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {overviewCards.map((item) => {
-            const Icon = item.icon
-
-            return (
-              <Card key={item.label}>
-                <CardHeader className="gap-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardDescription>{item.label}</CardDescription>
-                      <CardTitle className="mt-1 text-base">{item.value}</CardTitle>
-                    </div>
-                    <div className="bg-muted flex size-9 items-center justify-center">
-                      <Icon className="size-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">{item.helper}</p>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick actions</CardTitle>
-              <CardDescription>
-                Keep the entry points simple on mobile. These can map to real flows later.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-2 sm:grid-cols-2">
-              {quickActions.map((action) => {
-                const Icon = action.icon
-
-                return (
-                  <Button
-                    key={action.label}
-                    variant="outline"
-                    className="h-auto justify-start px-3 py-3"
-                  >
-                    <div className="bg-muted flex size-8 items-center justify-center">
-                      <Icon className="size-4 text-muted-foreground" />
-                    </div>
-                    <div className="min-w-0 text-left">
-                      <p className="text-xs font-medium text-foreground">{action.label}</p>
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        {action.description}
-                      </p>
-                    </div>
-                  </Button>
-                )
-              })}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Today&apos;s focus</CardTitle>
-              <CardDescription>
-                Inventory and payroll highlights surfaced on the home screen.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                {lowStockItems.map((item) => (
-                  <div
-                    key={item.name}
-                    className="flex items-center justify-between gap-3 border px-3 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium">{item.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{item.category}</p>
-                    </div>
-                    <Badge variant="outline">{item.stock}</Badge>
-                  </div>
-                ))}
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <div>
-                  <p className="font-medium">Payroll countdown</p>
-                  <p className="text-muted-foreground">Draft run scheduled on March 17, 2026</p>
-                </div>
-                <Badge variant="secondary">5 days</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent transactions</CardTitle>
-            <CardDescription>
-              Dummy activity feed for the dashboard module preview.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {recentTransactions.map((transaction, index) => (
-              <div key={transaction.id}>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium">
-                      {transaction.id} • {transaction.customer}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {transaction.method} • {transaction.time}
-                    </p>
-                  </div>
-                  <p className="text-xs font-medium">{transaction.amount}</p>
-                </div>
-                {index < recentTransactions.length - 1 ? <Separator className="mt-3" /> : null}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </main>
+      <main className="min-h-[calc(100svh-8rem)] w-full px-4 py-4 pb-24 md:px-6 md:pb-8 lg:px-8" />
 
       <MobileBottomNav />
     </div>
