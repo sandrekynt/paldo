@@ -9,7 +9,6 @@ import {
   Package2,
   Wallet,
 } from "lucide-react"
-
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -190,7 +189,7 @@ function MobileBusinessSwitcher({
         render={
           <BusinessSelectorTrigger
             business={activeBusiness}
-            className="w-full sm:w-[22rem] xl:w-[24rem]"
+            className="w-full sm:w-88 xl:w-[24rem]"
           />
         }
       />
@@ -275,12 +274,12 @@ function DesktopBusinessSwitcher({
     <div ref={containerRef} className="relative hidden md:block">
       <BusinessSelectorTrigger
         business={activeBusiness}
-        className="w-[22rem] xl:w-[24rem]"
+        className="w-88 xl:w-[24rem]"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       />
       {open ? (
-        <div className="border-border bg-popover absolute top-full left-0 z-20 mt-2 w-[22rem] border shadow-sm xl:w-[24rem]">
+        <div className="absolute top-full left-0 z-20 mt-2 w-88 border border-border bg-popover shadow-sm xl:w-[24rem]">
           <div className="grid gap-2 p-2">
             {businesses.map((business) => (
               <button
@@ -291,7 +290,7 @@ function DesktopBusinessSwitcher({
                   setOpen(false)
                 }}
                 className={cn(
-                  "hover:bg-muted text-left transition-colors",
+                  "text-left transition-colors hover:bg-muted",
                   business.id === selectedBusinessId && "bg-primary/5"
                 )}
               >
@@ -310,7 +309,9 @@ function DesktopBusinessSwitcher({
                     </div>
                     <Badge
                       variant={
-                        business.id === selectedBusinessId ? "success" : "outline"
+                        business.id === selectedBusinessId
+                          ? "success"
+                          : "outline"
                       }
                     >
                       {business.id === selectedBusinessId ? "Active" : "Switch"}
