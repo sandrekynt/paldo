@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { createPortal } from "react-dom"
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 import {
   ChevronDown,
   PackagePlus,
@@ -166,34 +166,10 @@ function SearchableOptionSelect({
   onRequestEdit: (value: string) => void
   onRequestDelete: (value: string) => void
 }) {
+  const isMobile = useIsMobile()
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
-  const containerRef = React.useRef<HTMLDivElement>(null)
-  const triggerRef = React.useRef<HTMLDivElement | null>(null)
-  const menuRef = React.useRef<HTMLDivElement | null>(null)
-  const [menuStyle, setMenuStyle] = React.useState<React.CSSProperties | null>(
-    null
-  )
-
-  React.useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node
-
-      if (
-        !containerRef.current?.contains(target) &&
-        !menuRef.current?.contains(target)
-      ) {
-        setOpen(false)
-        setQuery("")
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown)
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown)
-    }
-  }, [])
+  const inputRef = React.useRef<HTMLInputElement | null>(null)
 
   const normalizedQuery = query.trim().toLowerCase()
   const filteredOptions = options.filter((option) =>
@@ -202,52 +178,6 @@ function SearchableOptionSelect({
   const exactMatch = options.find(
     (option) => option.toLowerCase() === normalizedQuery
   )
-
-  React.useLayoutEffect(() => {
-    if (!open || !triggerRef.current || !menuRef.current) {
-      return
-    }
-
-    function updateMenuPosition() {
-      if (!triggerRef.current || !menuRef.current) {
-        return
-      }
-
-      const triggerRect = triggerRef.current.getBoundingClientRect()
-      const menuHeight = menuRef.current.offsetHeight
-      const viewportHeight = window.innerHeight
-      const viewportWidth = window.innerWidth
-      const spaceBelow = viewportHeight - triggerRect.bottom
-      const spaceAbove = triggerRect.top
-      const shouldOpenUp =
-        spaceBelow < menuHeight + 12 && spaceAbove > spaceBelow
-      const top = shouldOpenUp
-        ? Math.max(8, triggerRect.top - menuHeight - 8)
-        : Math.min(viewportHeight - menuHeight - 8, triggerRect.bottom + 8)
-      const left = Math.min(
-        triggerRect.left,
-        viewportWidth - triggerRect.width - 8
-      )
-
-      setMenuStyle({
-        position: "fixed",
-        top,
-        left: Math.max(8, left),
-        width: triggerRect.width,
-        zIndex: 70,
-      })
-    }
-
-    updateMenuPosition()
-
-    window.addEventListener("resize", updateMenuPosition)
-    window.addEventListener("scroll", updateMenuPosition, true)
-
-    return () => {
-      window.removeEventListener("resize", updateMenuPosition)
-      window.removeEventListener("scroll", updateMenuPosition, true)
-    }
-  }, [open, options, query])
 
   function closeMenu() {
     setOpen(false)
@@ -272,134 +202,189 @@ function SearchableOptionSelect({
     closeMenu()
   }
 
-  return (
-    <div ref={containerRef} className="relative">
-      <div ref={triggerRef}>
+  const visibleOptions = normalizedQuery.length === 0 ? options : filteredOptions
+
+  const optionList = (
+    <div className="grid gap-3">
+      <div className="flex gap-2">
+        <Input
+          ref={inputRef}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault()
+              saveOption()
+            }
+          }}
+          placeholder={`Search or add ${placeholder.toLowerCase()}`}
+        />
         <Button
           type="button"
           variant="outline"
-          className={cn("h-8 w-full justify-between", open && "border-primary")}
-          onClick={() => setOpen((current) => !current)}
+          className="h-8"
+          disabled={query.trim().length === 0}
+          onClick={saveOption}
+        >
+          Add
+        </Button>
+      </div>
+
+      <div className="grid max-h-[min(15rem,var(--available-height))] gap-2 overflow-y-auto">
+        {visibleOptions.map((option) => (
+          <div
+            key={option}
+            className={cn(
+              "flex items-stretch justify-between gap-2 border border-border",
+              value === option && "border-primary bg-primary/10"
+            )}
+          >
+            <button
+              type="button"
+              className="min-w-0 flex-1 px-2 py-2 text-left text-xs"
+              onClick={() => {
+                onChange(option)
+                closeMenu()
+              }}
+            >
+              <span className="block truncate">{option}</span>
+            </button>
+            <div className="flex items-center gap-1 p-1">
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        closeMenu()
+                        onRequestEdit(option)
+                      }}
+                    />
+                  }
+                >
+                  <PencilLine className="size-3.5" />
+                </TooltipTrigger>
+                <TooltipContent>Edit</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon-sm"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        closeMenu()
+                        onRequestDelete(option)
+                      }}
+                    />
+                  }
+                >
+                  <Trash2 className="size-3.5" />
+                </TooltipTrigger>
+                <TooltipContent>Delete</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        ))}
+
+        {visibleOptions.length === 0 ? (
+          <div className="border border-border p-3 text-xs text-muted-foreground">
+            No matches yet.
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+
+  if (isMobile) {
+    return (
+      <Sheet
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen)
+
+          if (!nextOpen) {
+            setQuery("")
+          }
+        }}
+      >
+        <SheetTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              className={cn("h-8 w-full justify-between", open && "border-primary")}
+            />
+          }
         >
           <span className={cn("truncate", !value && "text-muted-foreground")}>
             {value || placeholder}
           </span>
           <ChevronDown className="size-4 text-muted-foreground" />
-        </Button>
-      </div>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="max-h-[85svh] gap-0 border-t">
+          <SheetHeader className="border-b">
+            <SheetTitle>{placeholder}</SheetTitle>
+          </SheetHeader>
+          <div className="overflow-y-auto p-4">{optionList}</div>
+          <SheetFooter className="border-t">
+            <SheetClose render={<Button variant="ghost" />}>Done</SheetClose>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    )
+  }
 
-      {open && typeof document !== "undefined"
-        ? createPortal(
-            <div
-              ref={menuRef}
-              style={menuStyle ?? undefined}
-              className="border border-border bg-popover p-4 shadow-sm"
-            >
-              <div className="grid gap-3">
-                <div className="flex gap-2">
-                  <Input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault()
-                        saveOption()
-                      }
-                    }}
-                    placeholder={`Search or add ${placeholder.toLowerCase()}`}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-8"
-                    disabled={query.trim().length === 0}
-                    onClick={saveOption}
-                  >
-                    Add
-                  </Button>
-                </div>
+  return (
+    <PopoverPrimitive.Root
+      modal={false}
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
 
-                <div className="grid max-h-60 gap-2 overflow-y-auto">
-                  {(normalizedQuery.length === 0
-                    ? options
-                    : filteredOptions
-                  ).map((option) => (
-                    <div
-                      key={option}
-                      className={cn(
-                        "flex items-center justify-between gap-2 border border-border p-2",
-                        value === option && "border-primary bg-primary/10"
-                      )}
-                    >
-                      <button
-                        type="button"
-                        className="min-w-0 flex-1 truncate text-left text-xs"
-                        onMouseDown={(event) => {
-                          event.preventDefault()
-                          onChange(option)
-                          closeMenu()
-                        }}
-                      >
-                        {option}
-                      </button>
-                      <div className="flex items-center gap-1">
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon-sm"
-                                onMouseDown={(event) => {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                  closeMenu()
-                                  onRequestEdit(option)
-                                }}
-                              />
-                            }
-                          >
-                            <PencilLine className="size-3.5" />
-                          </TooltipTrigger>
-                          <TooltipContent>Edit</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon-sm"
-                                onMouseDown={(event) => {
-                                  event.preventDefault()
-                                  event.stopPropagation()
-                                  closeMenu()
-                                  onRequestDelete(option)
-                                }}
-                              />
-                            }
-                          >
-                            <Trash2 className="size-3.5" />
-                          </TooltipTrigger>
-                          <TooltipContent>Delete</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  ))}
+        if (!nextOpen) {
+          setQuery("")
+        }
+      }}
+    >
+      <PopoverPrimitive.Trigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            className={cn("h-8 w-full justify-between", open && "border-primary")}
+          />
+        }
+      >
+        <span className={cn("truncate", !value && "text-muted-foreground")}>
+          {value || placeholder}
+        </span>
+        <ChevronDown className="size-4 text-muted-foreground" />
+      </PopoverPrimitive.Trigger>
 
-                  {(normalizedQuery.length === 0 ? options : filteredOptions)
-                    .length === 0 ? (
-                    <div className="border border-border p-3 text-xs text-muted-foreground">
-                      No matches yet.
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
-    </div>
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Positioner
+          side="bottom"
+          align="start"
+          sideOffset={8}
+          collisionPadding={8}
+          className="z-[70]"
+        >
+          <PopoverPrimitive.Popup
+            initialFocus={inputRef}
+            finalFocus={false}
+            className="w-[var(--anchor-width)] border border-border bg-popover p-4 shadow-sm outline-none"
+          >
+            {optionList}
+          </PopoverPrimitive.Popup>
+        </PopoverPrimitive.Positioner>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
   )
 }
 
@@ -520,7 +505,7 @@ function ProductListRow({
       </td>
       <td className="px-3 py-3 text-xs">{product.lowStockThreshold}</td>
       <td className="px-3 py-3">{getStatusBadge(product)}</td>
-      <td className="px-3 py-3">
+      <td className="px-3 py-3 text-center">
         <Tooltip>
           <TooltipTrigger
             render={
@@ -1055,7 +1040,7 @@ export function InventoryWorkspace({
                   <th className="px-3 py-3 align-middle">Stock qty</th>
                   <th className="px-3 py-3 align-middle">Threshold</th>
                   <th className="px-3 py-3 align-middle">Status</th>
-                  <th className="px-3 py-3 align-middle">Action</th>
+                  <th className="px-3 py-3 text-center align-middle">Action</th>
                 </tr>
               </thead>
               <tbody>
