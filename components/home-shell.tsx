@@ -2,7 +2,9 @@
 
 import * as React from "react"
 import {
+  Bell,
   ChevronDown,
+  User,
   CreditCard,
   HandCoins,
   LayoutGrid,
@@ -251,7 +253,7 @@ export function HomeShell() {
     <div className="min-h-svh overflow-x-hidden bg-gray-100">
       <header className="sticky top-0 z-10 border-b bg-background/95 shadow-sm backdrop-blur">
         <div className="p-4">
-          <div className="md:flex md:items-center md:justify-between">
+          <div className="relative md:flex md:items-center md:justify-between">
             <div className="md:hidden">
               <MobileBusinessSwitcher
                 selectedBusinessId={selectedBusinessId}
@@ -262,7 +264,7 @@ export function HomeShell() {
               selectedBusinessId={selectedBusinessId}
               onSelect={setSelectedBusinessId}
             />
-            <div className="hidden items-center gap-2 md:flex">
+            <div className="hidden md:absolute md:left-1/2 md:flex md:-translate-x-1/2 md:items-center md:gap-2">
               {navItems.map((item) => (
                 <Button
                   key={item.label}
@@ -271,6 +273,7 @@ export function HomeShell() {
                   size="sm"
                   onClick={() => setSelectedModule(item.label)}
                   className={cn(
+                    "text-[14px] text-muted-foreground",
                     item.label === selectedModule &&
                       "bg-primary text-white hover:bg-primary hover:text-white"
                   )}
@@ -279,6 +282,26 @@ export function HomeShell() {
                   {item.label}
                 </Button>
               ))}
+            </div>
+            <div className="hidden items-center gap-2 md:flex">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full text-[14px] text-muted-foreground hover:bg-primary hover:text-white"
+                aria-label="Notifications"
+              >
+                <Bell className="size-5" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full text-[14px] text-muted-foreground hover:bg-primary hover:text-white"
+                aria-label="Profile"
+              >
+                <User className="size-5" />
+              </Button>
             </div>
           </div>
         </div>
