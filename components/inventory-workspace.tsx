@@ -218,11 +218,15 @@ function SearchableOptionSelect({
       const viewportWidth = window.innerWidth
       const spaceBelow = viewportHeight - triggerRect.bottom
       const spaceAbove = triggerRect.top
-      const shouldOpenUp = spaceBelow < menuHeight + 12 && spaceAbove > spaceBelow
+      const shouldOpenUp =
+        spaceBelow < menuHeight + 12 && spaceAbove > spaceBelow
       const top = shouldOpenUp
         ? Math.max(8, triggerRect.top - menuHeight - 8)
         : Math.min(viewportHeight - menuHeight - 8, triggerRect.bottom + 8)
-      const left = Math.min(triggerRect.left, viewportWidth - triggerRect.width - 8)
+      const left = Math.min(
+        triggerRect.left,
+        viewportWidth - triggerRect.width - 8
+      )
 
       setMenuStyle({
         position: "fixed",
@@ -273,10 +277,7 @@ function SearchableOptionSelect({
         <Button
           type="button"
           variant="outline"
-          className={cn(
-            "h-8 w-full justify-between",
-            open && "border-primary"
-          )}
+          className={cn("h-8 w-full justify-between", open && "border-primary")}
           onClick={() => setOpen((current) => !current)}
         >
           <span className={cn("truncate", !value && "text-muted-foreground")}>
@@ -318,65 +319,72 @@ function SearchableOptionSelect({
                 </div>
 
                 <div className="grid max-h-60 gap-2 overflow-y-auto">
-                  {(normalizedQuery.length === 0 ? options : filteredOptions).map(
-                    (option) => (
-                      <div
-                        key={option}
-                        className="flex items-center justify-between gap-2 border border-border p-2"
+                  {(normalizedQuery.length === 0
+                    ? options
+                    : filteredOptions
+                  ).map((option) => (
+                    <div
+                      key={option}
+                      className={cn(
+                        "flex items-center justify-between gap-2 border border-border p-2",
+                        value === option && "border-primary bg-primary/10"
+                      )}
+                    >
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 truncate text-left text-xs"
+                        onMouseDown={(event) => {
+                          event.preventDefault()
+                          onChange(option)
+                          closeMenu()
+                        }}
                       >
-                        <button
-                          type="button"
-                          className="min-w-0 flex-1 truncate text-left text-xs"
-                          onClick={() => {
-                            onChange(option)
-                            closeMenu()
-                          }}
-                        >
-                          {option}
-                        </button>
-                        <div className="flex items-center gap-1">
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon-sm"
-                                  onClick={(event) => {
-                                    event.stopPropagation()
-                                    closeMenu()
-                                    onRequestEdit(option)
-                                  }}
-                                />
-                              }
-                            >
-                              <PencilLine className="size-3.5" />
-                            </TooltipTrigger>
-                            <TooltipContent>Edit</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="icon-sm"
-                                  onClick={(event) => {
-                                    event.stopPropagation()
-                                    closeMenu()
-                                    onRequestDelete(option)
-                                  }}
-                                />
-                              }
-                            >
-                              <Trash2 className="size-3.5" />
-                            </TooltipTrigger>
-                            <TooltipContent>Delete</TooltipContent>
-                          </Tooltip>
-                        </div>
+                        {option}
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon-sm"
+                                onMouseDown={(event) => {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                  closeMenu()
+                                  onRequestEdit(option)
+                                }}
+                              />
+                            }
+                          >
+                            <PencilLine className="size-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Edit</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon-sm"
+                                onMouseDown={(event) => {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                  closeMenu()
+                                  onRequestDelete(option)
+                                }}
+                              />
+                            }
+                          >
+                            <Trash2 className="size-3.5" />
+                          </TooltipTrigger>
+                          <TooltipContent>Delete</TooltipContent>
+                        </Tooltip>
                       </div>
-                    )
-                  )}
+                    </div>
+                  ))}
 
                   {(normalizedQuery.length === 0 ? options : filteredOptions)
                     .length === 0 ? (
@@ -550,9 +558,8 @@ export function InventoryWorkspace({
   const [unitOptions, setUnitOptions] = React.useState<string[]>(
     Array.from(inventoryUnitOptions)
   )
-  const [optionDialog, setOptionDialog] = React.useState<OptionDialogState | null>(
-    null
-  )
+  const [optionDialog, setOptionDialog] =
+    React.useState<OptionDialogState | null>(null)
   const [optionDialogValue, setOptionDialogValue] = React.useState("")
   const [editDraft, setEditDraft] = React.useState<ProductDraft | null>(null)
   const [editingProductId, setEditingProductId] = React.useState<string | null>(
@@ -664,9 +671,15 @@ export function InventoryWorkspace({
     setUnitOptions(values)
   }
 
-  function updateDraftFieldValue(field: OptionField, nextValue: string, previousValue: string) {
+  function updateDraftFieldValue(
+    field: OptionField,
+    nextValue: string,
+    previousValue: string
+  ) {
     setAddDraft((current) =>
-      current[field] === previousValue ? { ...current, [field]: nextValue } : current
+      current[field] === previousValue
+        ? { ...current, [field]: nextValue }
+        : current
     )
     setEditDraft((current) =>
       current && current[field] === previousValue
@@ -759,7 +772,7 @@ export function InventoryWorkspace({
                     }
                   />
                 </div>
-                <SheetFooter className="border-t flex-row justify-end">
+                <SheetFooter className="flex-row justify-end border-t">
                   <SheetClose render={<Button variant="secondary" />}>
                     Cancel
                   </SheetClose>
@@ -809,7 +822,7 @@ export function InventoryWorkspace({
                     />
                   ) : null}
                 </div>
-                <SheetFooter className="border-t flex-row justify-between">
+                <SheetFooter className="flex-row justify-between border-t">
                   <Button variant="destructive">Delete</Button>
                   <div className="flex items-center gap-2">
                     <SheetClose render={<Button variant="secondary" />}>
@@ -838,10 +851,16 @@ export function InventoryWorkspace({
                 </SheetHeader>
                 <div className="grid gap-4 p-4">
                   {optionDialog?.action === "edit" ? (
-                    <Field label={optionDialog.field === "category" ? "Category" : "Unit"}>
+                    <Field
+                      label={
+                        optionDialog.field === "category" ? "Category" : "Unit"
+                      }
+                    >
                       <Input
                         value={optionDialogValue}
-                        onChange={(event) => setOptionDialogValue(event.target.value)}
+                        onChange={(event) =>
+                          setOptionDialogValue(event.target.value)
+                        }
                       />
                     </Field>
                   ) : (
@@ -853,23 +872,22 @@ export function InventoryWorkspace({
                 </div>
                 <SheetFooter
                   className={cn(
-                    "border-t flex-row",
+                    "flex-row border-t",
                     optionDialog?.action === "edit"
                       ? "justify-end"
-                      : "justify-between"
+                      : "justify-end"
                   )}
                 >
-                  {optionDialog?.action === "delete" ? (
-                    <Button variant="destructive" onClick={applyOptionDialog}>
-                      Delete
-                    </Button>
-                  ) : null}
                   <div className="flex items-center gap-2">
                     <SheetClose render={<Button variant="secondary" />}>
                       Cancel
                     </SheetClose>
                     {optionDialog?.action === "edit" ? (
                       <Button onClick={applyOptionDialog}>Save</Button>
+                    ) : optionDialog?.action === "delete" ? (
+                      <Button variant="destructive" onClick={applyOptionDialog}>
+                        Delete
+                      </Button>
                     ) : null}
                   </div>
                 </SheetFooter>
@@ -927,7 +945,7 @@ export function InventoryWorkspace({
                               type="checkbox"
                               checked={checked}
                               onChange={() => toggleStatus(item.id)}
-                              className="size-4 rounded-none border border-input accent-[var(--color-primary)]"
+                              className="size-4 rounded-none border border-input accent-(--color-primary)"
                             />
                             <span>{item.label}</span>
                           </label>
@@ -988,7 +1006,7 @@ export function InventoryWorkspace({
                               type="checkbox"
                               checked={checked}
                               onChange={() => toggleStatus(item.id)}
-                              className="size-4 rounded-none border border-input accent-[var(--color-primary)]"
+                              className="size-4 rounded-none border border-input accent-(--color-primary)"
                             />
                             <span>{item.label}</span>
                           </label>
