@@ -930,7 +930,7 @@ export function InventoryWorkspace({
                 <div className="grid gap-4 p-4">
                   <p className="text-xs text-muted-foreground">
                     Delete{" "}
-                    <span className="font-semibold text-foreground">
+                    <span className="font-medium text-foreground">
                       {editingProduct?.name ?? "this product"}
                     </span>
                     ?

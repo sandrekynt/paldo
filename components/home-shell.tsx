@@ -46,9 +46,6 @@ function BusinessSelectorLabel({ businessId }: { businessId: string }) {
   return (
     <div className="min-w-0">
       <p className="truncate text-sm font-medium">{business.name}</p>
-      <p className="truncate text-xs text-muted-foreground">
-        {business.type} • {business.address}
-      </p>
     </div>
   )
 }
@@ -86,7 +83,7 @@ function MobileBusinessSwitcher({
         render={
           <BusinessSelectorTrigger
             businessId={selectedBusinessId}
-            className="w-full sm:w-88 xl:w-[24rem]"
+            className="w-full sm:w-80"
           />
         }
       />
@@ -109,10 +106,9 @@ function MobileBusinessSwitcher({
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{business.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {business.type} • {business.address}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {business.name}
                     </p>
                   </div>
                 </div>
@@ -158,12 +154,12 @@ function DesktopBusinessSwitcher({
     <div ref={containerRef} className="relative hidden md:block">
       <BusinessSelectorTrigger
         businessId={selectedBusinessId}
-        className="w-88 xl:w-[24rem]"
+        className="w-72 xl:w-80"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       />
       {open ? (
-        <div className="absolute top-full left-0 z-20 mt-2 w-88 border border-border bg-popover shadow-sm xl:w-[24rem]">
+        <div className="absolute top-full left-0 z-20 mt-2 w-72 border border-border bg-popover shadow-sm xl:w-80">
           <div className="grid gap-2 p-4">
             {demoBusinesses.map((business) => (
               <button
@@ -186,10 +182,9 @@ function DesktopBusinessSwitcher({
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{business.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {business.type} • {business.address}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {business.name}
                       </p>
                     </div>
                   </div>
