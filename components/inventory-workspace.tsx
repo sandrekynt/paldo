@@ -49,7 +49,7 @@ type InventoryWorkspaceProps = {
   selectedBusinessId: string
 }
 
-type ProductStatus = "low" | "healthy" | "archived"
+type ProductStatus = "out" | "low" | "healthy" | "archived"
 type OptionField = "category" | "unit"
 type OptionDialogState = {
   action: "edit" | "delete"
@@ -73,6 +73,7 @@ type AddProductDraft = ProductFormDraft & {
 const PRODUCTS_PER_PAGE = 5
 const defaultStatuses: ProductStatus[] = []
 const statusOptions: { id: ProductStatus; label: string }[] = [
+  { id: "out", label: "Out of stock" },
   { id: "low", label: "Low stock" },
   { id: "healthy", label: "Healthy" },
   { id: "archived", label: "Archived" },
@@ -110,18 +111,34 @@ function getStatusBadge(product: DemoProduct) {
 
   if (status === "low") {
     return (
-      <Badge className="border-transparent bg-red-100 text-red-700">
+      <Badge className="border-transparent bg-amber-100 text-amber-700">
         Low stock
       </Badge>
     )
   }
 
-  return <Badge variant="success">Healthy</Badge>
+  if (status === "out") {
+    return (
+      <Badge className="border-transparent bg-red-100 text-red-700">
+        Out of stock
+      </Badge>
+    )
+  }
+
+  return (
+    <Badge className="border-transparent bg-green-100 text-green-700">
+      Healthy
+    </Badge>
+  )
 }
 
 function getProductStatus(product: DemoProduct): ProductStatus {
   if (!product.isActive) {
     return "archived"
+  }
+
+  if (product.currentStock === 0) {
+    return "out"
   }
 
   if (product.currentStock <= product.lowStockThreshold) {
