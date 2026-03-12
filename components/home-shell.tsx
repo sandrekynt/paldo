@@ -9,7 +9,8 @@ import {
   Package2,
   Wallet,
 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+
+import { InventoryWorkspace } from "@/components/inventory-workspace"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -21,112 +22,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { demoBusinesses } from "@/lib/dummy-data"
 import { cn } from "@/lib/utils"
 
-const businesses = [
-  {
-    id: "paldo-1",
-    name: "Konrad Mini Mart",
-    type: "Retail",
-    location: "Quezon City",
-    active: true,
-  },
-  {
-    id: "paldo-2",
-    name: "Southside Water Refilling",
-    type: "Services",
-    location: "Paranaque",
-    active: false,
-  },
-  {
-    id: "paldo-3",
-    name: "Vallejos Trading",
-    type: "Wholesale",
-    location: "Makati",
-    active: false,
-  },
-]
-
-// Dashboard sections kept here for later re-enable.
-/*
-const overviewCards = [
-  {
-    label: "Today sales",
-    value: "PHP 18,420",
-    helper: "+12.4% vs Mar 11",
-    icon: CircleDollarSign,
-  },
-  {
-    label: "Low stock",
-    value: "4 items",
-    helper: "2 need restock today",
-    icon: Package2,
-  },
-  {
-    label: "Outstanding utang",
-    value: "PHP 9,350",
-    helper: "7 customers open",
-    icon: HandCoins,
-  },
-  {
-    label: "Next payroll",
-    value: "5 days",
-    helper: "Cutoff on Mar 17",
-    icon: Wallet,
-  },
-]
-
-const quickActions = [
-  {
-    label: "Add product",
-    description: "Create a new inventory item",
-    icon: Plus,
-  },
-  {
-    label: "Start sale",
-    description: "Open a dummy POS checkout",
-    icon: CreditCard,
-  },
-  {
-    label: "Record utang",
-    description: "Log a customer balance",
-    icon: Receipt,
-  },
-  {
-    label: "Add employee",
-    description: "Prepare payroll setup",
-    icon: Users,
-  },
-]
-
-const recentTransactions = [
-  {
-    id: "TXN-1032",
-    customer: "Walk-in",
-    amount: "PHP 740",
-    method: "Cash",
-    time: "10:24 AM",
-  },
-  {
-    id: "TXN-1031",
-    customer: "Ana R.",
-    amount: "PHP 1,250",
-    method: "Utang",
-    time: "9:52 AM",
-  },
-  {
-    id: "TXN-1030",
-    customer: "GCash buyer",
-    amount: "PHP 320",
-    method: "GCash",
-    time: "9:10 AM",
-  },
-]
-*/
-
 const navItems = [
-  { label: "Home", icon: LayoutGrid, active: true },
-  { label: "Inventory", icon: Package2, active: false },
+  { label: "Home", icon: LayoutGrid, active: false },
+  { label: "Inventory", icon: Package2, active: true },
   { label: "POS", icon: CreditCard, active: false },
   { label: "Utang", icon: HandCoins, active: false },
   { label: "Payroll", icon: Wallet, active: false },
@@ -137,38 +38,37 @@ type BusinessSelectorProps = {
   onSelect: (id: string) => void
 }
 
-function BusinessSelectorLabel({
-  business,
-}: {
-  business: (typeof businesses)[number]
-}) {
+function BusinessSelectorLabel({ businessId }: { businessId: string }) {
+  const business =
+    demoBusinesses.find((entry) => entry.id === businessId) ?? demoBusinesses[0]
+
   return (
     <div className="min-w-0">
       <p className="truncate text-sm font-medium">{business.name}</p>
-      <p className="text-xs text-muted-foreground">
-        {business.type} • {business.location}
+      <p className="truncate text-xs text-muted-foreground">
+        {business.type} • {business.address}
       </p>
     </div>
   )
 }
 
 function BusinessSelectorTrigger({
-  business,
+  businessId,
   className,
   ...props
 }: {
-  business: (typeof businesses)[number]
+  businessId: string
   className?: string
 } & React.ComponentProps<typeof Button>) {
   return (
     <Button
       variant="outline"
-      className={cn("h-auto justify-between px-3 py-2", className)}
+      className={cn("h-auto justify-between p-4", className)}
       type="button"
       {...props}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-3 text-left">
-        <BusinessSelectorLabel business={business} />
+        <BusinessSelectorLabel businessId={businessId} />
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
       </div>
     </Button>
@@ -179,16 +79,12 @@ function MobileBusinessSwitcher({
   selectedBusinessId,
   onSelect,
 }: BusinessSelectorProps) {
-  const activeBusiness =
-    businesses.find((business) => business.id === selectedBusinessId) ??
-    businesses[0]
-
   return (
     <Sheet>
       <SheetTrigger
         render={
           <BusinessSelectorTrigger
-            business={activeBusiness}
+            businessId={selectedBusinessId}
             className="w-full sm:w-88 xl:w-[24rem]"
           />
         }
@@ -197,11 +93,12 @@ function MobileBusinessSwitcher({
         <SheetHeader className="border-b">
           <SheetTitle>Businesses</SheetTitle>
           <SheetDescription>
-            Dummy switcher for Phase 0 frontend. Session wiring comes later.
+            Inventory dummy states switch per business while backend wiring is
+            still pending.
           </SheetDescription>
         </SheetHeader>
         <div className="grid gap-3 p-4">
-          {businesses.map((business) => (
+          {demoBusinesses.map((business) => (
             <SheetClose
               key={business.id}
               render={<button type="button" className="text-left" />}
@@ -218,16 +115,9 @@ function MobileBusinessSwitcher({
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{business.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {business.type} • {business.location}
+                      {business.type} • {business.address}
                     </p>
                   </div>
-                  <Badge
-                    variant={
-                      business.id === selectedBusinessId ? "success" : "outline"
-                    }
-                  >
-                    {business.id === selectedBusinessId ? "Active" : "Switch"}
-                  </Badge>
                 </div>
               </Card>
             </SheetClose>
@@ -244,9 +134,6 @@ function DesktopBusinessSwitcher({
 }: BusinessSelectorProps) {
   const [open, setOpen] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
-  const activeBusiness =
-    businesses.find((business) => business.id === selectedBusinessId) ??
-    businesses[0]
 
   React.useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -273,15 +160,15 @@ function DesktopBusinessSwitcher({
   return (
     <div ref={containerRef} className="relative hidden md:block">
       <BusinessSelectorTrigger
-        business={activeBusiness}
+        businessId={selectedBusinessId}
         className="w-88 xl:w-[24rem]"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       />
       {open ? (
         <div className="absolute top-full left-0 z-20 mt-2 w-88 border border-border bg-popover shadow-sm xl:w-[24rem]">
-          <div className="grid gap-2 p-2">
-            {businesses.map((business) => (
+          <div className="grid gap-2 p-4">
+            {demoBusinesses.map((business) => (
               <button
                 key={business.id}
                 type="button"
@@ -304,18 +191,9 @@ function DesktopBusinessSwitcher({
                     <div className="space-y-1">
                       <p className="text-sm font-medium">{business.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {business.type} • {business.location}
+                        {business.type} • {business.address}
                       </p>
                     </div>
-                    <Badge
-                      variant={
-                        business.id === selectedBusinessId
-                          ? "success"
-                          : "outline"
-                      }
-                    >
-                      {business.id === selectedBusinessId ? "Active" : "Switch"}
-                    </Badge>
                   </div>
                 </Card>
               </button>
@@ -329,7 +207,7 @@ function DesktopBusinessSwitcher({
 
 function MobileBottomNav() {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur md:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 shadow-sm backdrop-blur md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-5">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -355,13 +233,13 @@ function MobileBottomNav() {
 
 export function HomeShell() {
   const [selectedBusinessId, setSelectedBusinessId] = React.useState(
-    businesses[0].id
+    demoBusinesses[0].id
   )
 
   return (
     <div className="min-h-svh bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="px-4 py-4 md:px-6 lg:px-8">
+      <header className="sticky top-0 z-10 border-b bg-background/95 shadow-sm backdrop-blur">
+        <div className="p-4">
           <div className="md:flex md:items-center md:justify-between">
             <div className="md:hidden">
               <MobileBusinessSwitcher
@@ -389,7 +267,9 @@ export function HomeShell() {
         </div>
       </header>
 
-      <main className="min-h-[calc(100svh-8rem)] w-full px-4 py-4 pb-24 md:px-6 md:pb-8 lg:px-8" />
+      <main className="min-h-[calc(100svh-8rem)] w-full p-4">
+        <InventoryWorkspace selectedBusinessId={selectedBusinessId} />
+      </main>
 
       <MobileBottomNav />
     </div>
