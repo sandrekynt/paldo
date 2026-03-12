@@ -68,7 +68,7 @@ type ProductDraft = {
 }
 
 const PRODUCTS_PER_PAGE = 5
-const defaultStatuses: ProductStatus[] = ["low", "healthy"]
+const defaultStatuses: ProductStatus[] = []
 const statusOptions: { id: ProductStatus; label: string }[] = [
   { id: "low", label: "Low stock" },
   { id: "healthy", label: "Healthy" },
@@ -202,7 +202,8 @@ function SearchableOptionSelect({
     closeMenu()
   }
 
-  const visibleOptions = normalizedQuery.length === 0 ? options : filteredOptions
+  const visibleOptions =
+    normalizedQuery.length === 0 ? options : filteredOptions
 
   const optionList = (
     <div className="grid gap-3">
@@ -318,7 +319,7 @@ function SearchableOptionSelect({
             <Button
               type="button"
               variant="outline"
-              className={cn("h-8 w-full justify-between", open && "border-primary")}
+              className="h-8 w-full justify-between"
             />
           }
         >
@@ -357,7 +358,7 @@ function SearchableOptionSelect({
           <Button
             type="button"
             variant="outline"
-            className={cn("h-8 w-full justify-between", open && "border-primary")}
+            className="h-8 w-full justify-between"
           />
         }
       >
@@ -373,12 +374,12 @@ function SearchableOptionSelect({
           align="start"
           sideOffset={8}
           collisionPadding={8}
-          className="z-[70]"
+          className="z-70"
         >
           <PopoverPrimitive.Popup
             initialFocus={inputRef}
             finalFocus={false}
-            className="w-[var(--anchor-width)] border border-border bg-popover p-4 shadow-sm outline-none"
+            className="w-(--anchor-width) border border-border bg-popover p-4 shadow-sm outline-none"
           >
             {optionList}
           </PopoverPrimitive.Popup>
@@ -735,7 +736,7 @@ export function InventoryWorkspace({
                 side={isMobile ? "bottom" : "center"}
                 className={cn(
                   "rounded-none",
-                  isMobile && "max-h-[85svh] gap-0 border-t overflow-y-auto"
+                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
                 )}
               >
                 <SheetHeader className="border-b">
@@ -787,7 +788,7 @@ export function InventoryWorkspace({
                 side={isMobile ? "bottom" : "center"}
                 className={cn(
                   "rounded-none",
-                  isMobile && "max-h-[85svh] gap-0 border-t overflow-y-auto"
+                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
                 )}
               >
                 <SheetHeader className="border-b">
@@ -845,7 +846,7 @@ export function InventoryWorkspace({
                 side={isMobile ? "bottom" : "center"}
                 className={cn(
                   "rounded-none",
-                  isMobile && "max-h-[85svh] gap-0 border-t overflow-y-auto"
+                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
                 )}
               >
                 <SheetHeader className="border-b">
