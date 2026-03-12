@@ -653,6 +653,7 @@ export function InventoryWorkspace({
   const [filtersOpen, setFiltersOpen] = React.useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false)
   const filtersRef = React.useRef<HTMLDivElement>(null)
+  const viewSheetScrollRef = React.useRef<HTMLDivElement | null>(null)
 
   React.useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -731,6 +732,14 @@ export function InventoryWorkspace({
       (first, second) =>
         new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime()
     )
+
+  React.useLayoutEffect(() => {
+    if (!isMobile || !viewingProduct) {
+      return
+    }
+
+    viewSheetScrollRef.current?.scrollTo({ top: 0, behavior: "auto" })
+  }, [isMobile, viewingProduct])
 
   function toggleStatus(status: ProductStatus) {
     setSelectedStatuses((current) =>
@@ -936,13 +945,17 @@ export function InventoryWorkspace({
                 side={isMobile ? "bottom" : "center"}
                 className={cn(
                   "rounded-none",
-                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
+                  isMobile && "max-h-[85svh] gap-0 border-t"
                 )}
               >
                 <SheetHeader className="border-b">
                   <SheetTitle>Product details</SheetTitle>
                 </SheetHeader>
-                <div className="grid gap-4 p-4">
+                <div
+                  ref={viewSheetScrollRef}
+                  key={viewingProductId ?? "product-details-body"}
+                  className="grid gap-4 overflow-y-auto p-4"
+                >
                   {viewingProduct ? (
                     <>
                       <div className="grid gap-4 border border-border p-4 md:grid-cols-2">
