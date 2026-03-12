@@ -238,7 +238,7 @@ export function HomeShell() {
   )
 
   return (
-    <div className="min-h-svh bg-background">
+    <div className="min-h-svh overflow-x-hidden bg-background">
       <header className="sticky top-0 z-10 border-b bg-background/95 shadow-sm backdrop-blur">
         <div className="p-4">
           <div className="md:flex md:items-center md:justify-between">
@@ -268,7 +268,7 @@ export function HomeShell() {
         </div>
       </header>
 
-      <main className="min-h-[calc(100svh-8rem)] w-full p-4">
+      <main className="min-h-[calc(100svh-8rem)] w-full p-4 pb-24 md:pb-4">
         <InventoryWorkspace selectedBusinessId={selectedBusinessId} />
       </main>
 

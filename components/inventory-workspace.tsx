@@ -48,6 +48,11 @@ type ProductDraft = {
 
 const PRODUCTS_PER_PAGE = 5
 const defaultStatuses: ProductStatus[] = ["low", "healthy"]
+const statusOptions: { id: ProductStatus; label: string }[] = [
+  { id: "low", label: "Low stock" },
+  { id: "healthy", label: "Healthy" },
+  { id: "archived", label: "Archived" },
+]
 
 function formatCurrency(value: number, currency: string) {
   return new Intl.NumberFormat("en-PH", {
@@ -247,6 +252,7 @@ export function InventoryWorkspace({
   const [page, setPage] = React.useState(1)
   const [addDraft, setAddDraft] = React.useState(inventory.drafts.addProduct)
   const [filtersOpen, setFiltersOpen] = React.useState(false)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false)
   const filtersRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
@@ -303,6 +309,14 @@ export function InventoryWorkspace({
     pageStart + PRODUCTS_PER_PAGE
   )
 
+  function toggleStatus(status: ProductStatus) {
+    setSelectedStatuses((current) =>
+      current.includes(status)
+        ? current.filter((value) => value !== status)
+        : [...current, status]
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -341,7 +355,7 @@ export function InventoryWorkspace({
         </div>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -351,65 +365,118 @@ export function InventoryWorkspace({
               className="pl-8"
             />
           </div>
-          <div ref={filtersRef} className="relative">
-            <Button
-              size="default"
-              variant="outline"
-              className={cn("h-8", filtersOpen && "border-primary")}
-              onClick={() => setFiltersOpen((current) => !current)}
-            >
-              <SlidersHorizontal className="size-4" />
-              Filters
-              {selectedStatuses.length > 0
-                ? ` (${selectedStatuses.length})`
-                : ""}
-            </Button>
-            {filtersOpen ? (
-              <div className="absolute top-full right-0 z-20 mt-2 w-36 border border-border bg-popover p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="text-xs font-medium">Statuses</p>
-                  <button
-                    type="button"
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() => setSelectedStatuses([])}
-                  >
-                    Clear
-                  </button>
-                </div>
-                <div className="grid gap-3 text-xs">
-                  {[
-                    { id: "low", label: "Low stock" },
-                    { id: "healthy", label: "Healthy" },
-                    { id: "archived", label: "Archived" },
-                  ].map((item) => {
-                    const checked = selectedStatuses.includes(
-                      item.id as ProductStatus
-                    )
+          <div className="justify-self-end">
+            <div ref={filtersRef} className="relative hidden md:block">
+              <Button
+                size="default"
+                variant="outline"
+                className={cn("h-8", filtersOpen && "border-primary")}
+                onClick={() => setFiltersOpen((current) => !current)}
+              >
+                <SlidersHorizontal className="size-4" />
+                Filters
+                {selectedStatuses.length > 0
+                  ? ` (${selectedStatuses.length})`
+                  : ""}
+              </Button>
+              {filtersOpen ? (
+                <div className="absolute top-full right-0 z-20 mt-2 w-44 border border-border bg-popover p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-xs font-medium">Statuses</p>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setSelectedStatuses([])}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="grid gap-3 text-xs">
+                    {statusOptions.map((item) => {
+                      const checked = selectedStatuses.includes(item.id)
 
-                    return (
-                      <label
-                        key={item.id}
-                        className="flex items-center gap-3 text-foreground"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() =>
-                            setSelectedStatuses((current) =>
-                              checked
-                                ? current.filter((status) => status !== item.id)
-                                : [...current, item.id as ProductStatus]
-                            )
-                          }
-                          className="size-4 rounded-none border border-input accent-[var(--color-primary)]"
-                        />
-                        <span>{item.label}</span>
-                      </label>
-                    )
-                  })}
+                      return (
+                        <label
+                          key={item.id}
+                          className="flex items-center gap-3 text-foreground"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleStatus(item.id)}
+                            className="size-4 rounded-none border border-input accent-(--color-primary)"
+                          />
+                          <span>{item.label}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
+
+            <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+              <SheetTrigger
+                render={
+                  <Button
+                    size="default"
+                    variant="outline"
+                    className="h-8 md:hidden"
+                  >
+                    <SlidersHorizontal className="size-4" />
+                    Filters
+                    {selectedStatuses.length > 0
+                      ? ` (${selectedStatuses.length})`
+                      : ""}
+                  </Button>
+                }
+              />
+              <SheetContent
+                side="bottom"
+                className="max-h-[85svh] gap-0 border-t md:hidden"
+              >
+                <SheetHeader className="border-b">
+                  <SheetTitle>Filters</SheetTitle>
+                </SheetHeader>
+                <div className="grid gap-4 overflow-y-auto p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-medium">Statuses</p>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setSelectedStatuses([])}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="grid gap-3 text-xs">
+                    {statusOptions.map((item) => {
+                      const checked = selectedStatuses.includes(item.id)
+
+                      return (
+                        <label
+                          key={item.id}
+                          className="flex items-center gap-3 text-foreground"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleStatus(item.id)}
+                            className="size-4 rounded-none border border-input accent-(--color-primary)"
+                          />
+                          <span>{item.label}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+                <SheetFooter className="border-t">
+                  <SheetClose render={<Button variant="ghost" />}>
+                    Done
+                  </SheetClose>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
 
