@@ -1,7 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { PackagePlus, Search, SlidersHorizontal } from "lucide-react"
+import { createPortal } from "react-dom"
+import {
+  ChevronDown,
+  PackagePlus,
+  PencilLine,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,6 +31,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   demoBusinesses,
   getInventoryDemo,
   inventoryUnitOptions,
@@ -35,6 +49,12 @@ type InventoryWorkspaceProps = {
 }
 
 type ProductStatus = "low" | "healthy" | "archived"
+type OptionField = "category" | "unit"
+type OptionDialogState = {
+  action: "edit" | "delete"
+  field: OptionField
+  value: string
+}
 
 type ProductDraft = {
   name: string
@@ -60,6 +80,18 @@ function formatCurrency(value: number, currency: string) {
     currency,
     minimumFractionDigits: 2,
   }).format(value)
+}
+
+function getDraftFromProduct(product: DemoProduct): ProductDraft {
+  return {
+    name: product.name,
+    category: product.category,
+    unit: product.unit,
+    buyingPrice: product.buyingPrice.toFixed(2),
+    sellingPrice: product.sellingPrice.toFixed(2),
+    currentStock: String(product.currentStock),
+    lowStockThreshold: String(product.lowStockThreshold),
+  }
 }
 
 function getStatusBadge(product: DemoProduct) {
@@ -116,14 +148,274 @@ function Field({
   )
 }
 
+function SearchableOptionSelect({
+  value,
+  options,
+  placeholder,
+  onChange,
+  onOptionsChange,
+  onRequestEdit,
+  onRequestDelete,
+}: {
+  value: string
+  options: string[]
+  placeholder: string
+  onChange: (value: string) => void
+  onOptionsChange: (values: string[]) => void
+  onRequestEdit: (value: string) => void
+  onRequestDelete: (value: string) => void
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [query, setQuery] = React.useState("")
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const triggerRef = React.useRef<HTMLDivElement | null>(null)
+  const menuRef = React.useRef<HTMLDivElement | null>(null)
+  const [menuStyle, setMenuStyle] = React.useState<React.CSSProperties | null>(
+    null
+  )
+
+  React.useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node
+
+      if (
+        !containerRef.current?.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
+        setOpen(false)
+        setQuery("")
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown)
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+    }
+  }, [])
+
+  const normalizedQuery = query.trim().toLowerCase()
+  const filteredOptions = options.filter((option) =>
+    option.toLowerCase().includes(normalizedQuery)
+  )
+  const exactMatch = options.find(
+    (option) => option.toLowerCase() === normalizedQuery
+  )
+
+  React.useLayoutEffect(() => {
+    if (!open || !triggerRef.current || !menuRef.current) {
+      return
+    }
+
+    function updateMenuPosition() {
+      if (!triggerRef.current || !menuRef.current) {
+        return
+      }
+
+      const triggerRect = triggerRef.current.getBoundingClientRect()
+      const menuHeight = menuRef.current.offsetHeight
+      const viewportHeight = window.innerHeight
+      const viewportWidth = window.innerWidth
+      const spaceBelow = viewportHeight - triggerRect.bottom
+      const spaceAbove = triggerRect.top
+      const shouldOpenUp = spaceBelow < menuHeight + 12 && spaceAbove > spaceBelow
+      const top = shouldOpenUp
+        ? Math.max(8, triggerRect.top - menuHeight - 8)
+        : Math.min(viewportHeight - menuHeight - 8, triggerRect.bottom + 8)
+      const left = Math.min(triggerRect.left, viewportWidth - triggerRect.width - 8)
+
+      setMenuStyle({
+        position: "fixed",
+        top,
+        left: Math.max(8, left),
+        width: triggerRect.width,
+        zIndex: 70,
+      })
+    }
+
+    updateMenuPosition()
+
+    window.addEventListener("resize", updateMenuPosition)
+    window.addEventListener("scroll", updateMenuPosition, true)
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition)
+      window.removeEventListener("scroll", updateMenuPosition, true)
+    }
+  }, [open, options, query])
+
+  function closeMenu() {
+    setOpen(false)
+    setQuery("")
+  }
+
+  function saveOption() {
+    const trimmed = query.trim()
+
+    if (!trimmed) {
+      return
+    }
+
+    if (exactMatch) {
+      onChange(exactMatch)
+      closeMenu()
+      return
+    }
+
+    onOptionsChange([...options, trimmed])
+    onChange(trimmed)
+    closeMenu()
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div ref={triggerRef}>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(
+            "h-8 w-full justify-between",
+            open && "border-primary"
+          )}
+          onClick={() => setOpen((current) => !current)}
+        >
+          <span className={cn("truncate", !value && "text-muted-foreground")}>
+            {value || placeholder}
+          </span>
+          <ChevronDown className="size-4 text-muted-foreground" />
+        </Button>
+      </div>
+
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={menuRef}
+              style={menuStyle ?? undefined}
+              className="border border-border bg-popover p-4 shadow-sm"
+            >
+              <div className="grid gap-3">
+                <div className="flex gap-2">
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault()
+                        saveOption()
+                      }
+                    }}
+                    placeholder={`Search or add ${placeholder.toLowerCase()}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8"
+                    disabled={query.trim().length === 0}
+                    onClick={saveOption}
+                  >
+                    Add
+                  </Button>
+                </div>
+
+                <div className="grid max-h-60 gap-2 overflow-y-auto">
+                  {(normalizedQuery.length === 0 ? options : filteredOptions).map(
+                    (option) => (
+                      <div
+                        key={option}
+                        className="flex items-center justify-between gap-2 border border-border p-2"
+                      >
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 truncate text-left text-xs"
+                          onClick={() => {
+                            onChange(option)
+                            closeMenu()
+                          }}
+                        >
+                          {option}
+                        </button>
+                        <div className="flex items-center gap-1">
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon-sm"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    closeMenu()
+                                    onRequestEdit(option)
+                                  }}
+                                />
+                              }
+                            >
+                              <PencilLine className="size-3.5" />
+                            </TooltipTrigger>
+                            <TooltipContent>Edit</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon-sm"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    closeMenu()
+                                    onRequestDelete(option)
+                                  }}
+                                />
+                              }
+                            >
+                              <Trash2 className="size-3.5" />
+                            </TooltipTrigger>
+                            <TooltipContent>Delete</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  {(normalizedQuery.length === 0 ? options : filteredOptions)
+                    .length === 0 ? (
+                    <div className="border border-border p-3 text-xs text-muted-foreground">
+                      No matches yet.
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+    </div>
+  )
+}
+
 function ProductForm({
   draft,
-  suggestedCategories,
+  categoryOptions,
+  unitOptions,
   onChange,
+  onCategoryOptionsChange,
+  onUnitOptionsChange,
+  onRequestCategoryEdit,
+  onRequestCategoryDelete,
+  onRequestUnitEdit,
+  onRequestUnitDelete,
 }: {
   draft: ProductDraft
-  suggestedCategories: string[]
+  categoryOptions: string[]
+  unitOptions: string[]
   onChange: (field: keyof ProductDraft, value: string) => void
+  onCategoryOptionsChange: (values: string[]) => void
+  onUnitOptionsChange: (values: string[]) => void
+  onRequestCategoryEdit: (value: string) => void
+  onRequestCategoryDelete: (value: string) => void
+  onRequestUnitEdit: (value: string) => void
+  onRequestUnitDelete: (value: string) => void
 }) {
   return (
     <div className="grid gap-4">
@@ -135,9 +427,25 @@ function ProductForm({
           />
         </Field>
         <Field label="Category">
-          <Input
+          <SearchableOptionSelect
             value={draft.category}
-            onChange={(event) => onChange("category", event.target.value)}
+            options={categoryOptions}
+            placeholder="Select category"
+            onChange={(value) => onChange("category", value)}
+            onOptionsChange={onCategoryOptionsChange}
+            onRequestEdit={onRequestCategoryEdit}
+            onRequestDelete={onRequestCategoryDelete}
+          />
+        </Field>
+        <Field label="Unit">
+          <SearchableOptionSelect
+            value={draft.unit}
+            options={unitOptions}
+            placeholder="Select unit"
+            onChange={(value) => onChange("unit", value)}
+            onOptionsChange={onUnitOptionsChange}
+            onRequestEdit={onRequestUnitEdit}
+            onRequestDelete={onRequestUnitDelete}
           />
         </Field>
         <Field label="Buying price">
@@ -167,40 +475,6 @@ function ProductForm({
           />
         </Field>
       </div>
-
-      <Field label="Category suggestions">
-        <div className="flex flex-wrap gap-2">
-          {suggestedCategories.map((category) => (
-            <button
-              key={category}
-              type="button"
-              className="rounded-none border border-border px-2 py-1 text-xs hover:bg-muted"
-              onClick={() => onChange("category", category)}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-      </Field>
-
-      <Field label="Unit">
-        <div className="flex flex-wrap gap-2">
-          {inventoryUnitOptions.map((unit) => (
-            <button
-              key={unit}
-              type="button"
-              className={cn(
-                "rounded-none border border-border px-2 py-1 text-xs capitalize",
-                draft.unit === unit &&
-                  "border-primary bg-primary/10 text-primary"
-              )}
-              onClick={() => onChange("unit", unit)}
-            >
-              {unit}
-            </button>
-          ))}
-        </div>
-      </Field>
     </div>
   )
 }
@@ -208,9 +482,11 @@ function ProductForm({
 function ProductListRow({
   product,
   currency,
+  onEdit,
 }: {
   product: DemoProduct
   currency: string
+  onEdit: () => void
 }) {
   return (
     <tr className="border-t border-border">
@@ -235,6 +511,23 @@ function ProductListRow({
       </td>
       <td className="px-3 py-3 text-xs">{product.lowStockThreshold}</td>
       <td className="px-3 py-3">{getStatusBadge(product)}</td>
+      <td className="px-3 py-3">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={`Edit ${product.name}`}
+                onClick={onEdit}
+              />
+            }
+          >
+            <PencilLine className="size-3.5" />
+          </TooltipTrigger>
+          <TooltipContent>Edit</TooltipContent>
+        </Tooltip>
+      </td>
     </tr>
   )
 }
@@ -251,6 +544,20 @@ export function InventoryWorkspace({
   const [searchQuery, setSearchQuery] = React.useState("")
   const [page, setPage] = React.useState(1)
   const [addDraft, setAddDraft] = React.useState(inventory.drafts.addProduct)
+  const [categoryOptions, setCategoryOptions] = React.useState<string[]>(
+    inventory.suggestedCategories
+  )
+  const [unitOptions, setUnitOptions] = React.useState<string[]>(
+    Array.from(inventoryUnitOptions)
+  )
+  const [optionDialog, setOptionDialog] = React.useState<OptionDialogState | null>(
+    null
+  )
+  const [optionDialogValue, setOptionDialogValue] = React.useState("")
+  const [editDraft, setEditDraft] = React.useState<ProductDraft | null>(null)
+  const [editingProductId, setEditingProductId] = React.useState<string | null>(
+    null
+  )
   const [filtersOpen, setFiltersOpen] = React.useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false)
   const filtersRef = React.useRef<HTMLDivElement>(null)
@@ -274,6 +581,12 @@ export function InventoryWorkspace({
     setSearchQuery("")
     setPage(1)
     setAddDraft(inventory.drafts.addProduct)
+    setCategoryOptions(inventory.suggestedCategories)
+    setUnitOptions(Array.from(inventoryUnitOptions))
+    setOptionDialog(null)
+    setOptionDialogValue("")
+    setEditDraft(null)
+    setEditingProductId(null)
   }, [inventory])
 
   const filteredProducts = inventory.products.filter((product) => {
@@ -308,6 +621,12 @@ export function InventoryWorkspace({
     pageStart,
     pageStart + PRODUCTS_PER_PAGE
   )
+  const editingProduct =
+    editingProductId !== null
+      ? (inventory.products.find(
+          (product) => product.id === editingProductId
+        ) ?? null)
+      : null
 
   function toggleStatus(status: ProductStatus) {
     setSelectedStatuses((current) =>
@@ -317,262 +636,485 @@ export function InventoryWorkspace({
     )
   }
 
+  function openEditModal(product: DemoProduct) {
+    setEditingProductId(product.id)
+    setEditDraft(getDraftFromProduct(product))
+  }
+
+  function openOptionDialog(
+    field: OptionField,
+    action: "edit" | "delete",
+    value: string
+  ) {
+    setOptionDialog({ field, action, value })
+    setOptionDialogValue(value)
+  }
+
+  function closeOptionDialog() {
+    setOptionDialog(null)
+    setOptionDialogValue("")
+  }
+
+  function updateFieldOptions(field: OptionField, values: string[]) {
+    if (field === "category") {
+      setCategoryOptions(values)
+      return
+    }
+
+    setUnitOptions(values)
+  }
+
+  function updateDraftFieldValue(field: OptionField, nextValue: string, previousValue: string) {
+    setAddDraft((current) =>
+      current[field] === previousValue ? { ...current, [field]: nextValue } : current
+    )
+    setEditDraft((current) =>
+      current && current[field] === previousValue
+        ? { ...current, [field]: nextValue }
+        : current
+    )
+  }
+
+  function applyOptionDialog() {
+    if (!optionDialog) {
+      return
+    }
+
+    const sourceOptions =
+      optionDialog.field === "category" ? categoryOptions : unitOptions
+
+    if (optionDialog.action === "edit") {
+      const trimmed = optionDialogValue.trim()
+
+      if (!trimmed || trimmed === optionDialog.value) {
+        closeOptionDialog()
+        return
+      }
+
+      const nextOptions = sourceOptions.reduce<string[]>((result, option) => {
+        const nextOption = option === optionDialog.value ? trimmed : option
+
+        if (!result.includes(nextOption)) {
+          result.push(nextOption)
+        }
+
+        return result
+      }, [])
+
+      updateFieldOptions(optionDialog.field, nextOptions)
+      updateDraftFieldValue(optionDialog.field, trimmed, optionDialog.value)
+      closeOptionDialog()
+      return
+    }
+
+    const nextOptions = sourceOptions.filter(
+      (option) => option !== optionDialog.value
+    )
+
+    updateFieldOptions(optionDialog.field, nextOptions)
+    updateDraftFieldValue(optionDialog.field, "", optionDialog.value)
+    closeOptionDialog()
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <CardTitle>Product list</CardTitle>
-          <Sheet>
-            <SheetTrigger
-              render={
-                <Button>
-                  <PackagePlus className="size-4" />
-                  Add product
-                </Button>
-              }
-            />
-            <SheetContent side="center" className="rounded-none">
-              <SheetHeader className="border-b">
-                <SheetTitle>Add product</SheetTitle>
-              </SheetHeader>
-              <div className="p-4">
-                <ProductForm
-                  draft={addDraft}
-                  suggestedCategories={inventory.suggestedCategories}
-                  onChange={(field, value) =>
-                    setAddDraft((current) => ({ ...current, [field]: value }))
-                  }
-                />
-              </div>
-              <SheetFooter className="border-t sm:flex-row sm:justify-between">
-                <SheetClose render={<Button variant="ghost" />}>
-                  Cancel
-                </SheetClose>
-                <Button>Save new product</Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search product, category, or ID"
-              className="pl-8"
-            />
-          </div>
-          <div className="justify-self-end">
-            <div ref={filtersRef} className="relative hidden md:block">
-              <Button
-                size="default"
-                variant="outline"
-                className={cn("h-8", filtersOpen && "border-primary")}
-                onClick={() => setFiltersOpen((current) => !current)}
-              >
-                <SlidersHorizontal className="size-4" />
-                Filters
-                {selectedStatuses.length > 0
-                  ? ` (${selectedStatuses.length})`
-                  : ""}
-              </Button>
-              {filtersOpen ? (
-                <div className="absolute top-full right-0 z-20 mt-2 w-44 border border-border bg-popover p-4 shadow-sm">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-xs font-medium">Statuses</p>
-                    <button
-                      type="button"
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                      onClick={() => setSelectedStatuses([])}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="grid gap-3 text-xs">
-                    {statusOptions.map((item) => {
-                      const checked = selectedStatuses.includes(item.id)
-
-                      return (
-                        <label
-                          key={item.id}
-                          className="flex items-center gap-3 text-foreground"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleStatus(item.id)}
-                            className="size-4 rounded-none border border-input accent-(--color-primary)"
-                          />
-                          <span>{item.label}</span>
-                        </label>
-                      )
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+    <TooltipProvider>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <CardTitle>Product list</CardTitle>
+            <Sheet>
               <SheetTrigger
                 render={
-                  <Button
-                    size="default"
-                    variant="outline"
-                    className="h-8 md:hidden"
-                  >
-                    <SlidersHorizontal className="size-4" />
-                    Filters
-                    {selectedStatuses.length > 0
-                      ? ` (${selectedStatuses.length})`
-                      : ""}
+                  <Button>
+                    <PackagePlus className="size-4" />
+                    Add product
                   </Button>
                 }
               />
-              <SheetContent
-                side="bottom"
-                className="max-h-[85svh] gap-0 border-t md:hidden"
-              >
+              <SheetContent side="center" className="rounded-none">
                 <SheetHeader className="border-b">
-                  <SheetTitle>Filters</SheetTitle>
+                  <SheetTitle>Add product</SheetTitle>
                 </SheetHeader>
-                <div className="grid gap-4 overflow-y-auto p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-medium">Statuses</p>
-                    <button
-                      type="button"
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                      onClick={() => setSelectedStatuses([])}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="grid gap-3 text-xs">
-                    {statusOptions.map((item) => {
-                      const checked = selectedStatuses.includes(item.id)
-
-                      return (
-                        <label
-                          key={item.id}
-                          className="flex items-center gap-3 text-foreground"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleStatus(item.id)}
-                            className="size-4 rounded-none border border-input accent-(--color-primary)"
-                          />
-                          <span>{item.label}</span>
-                        </label>
-                      )
-                    })}
-                  </div>
+                <div className="p-4">
+                  <ProductForm
+                    draft={addDraft}
+                    categoryOptions={categoryOptions}
+                    unitOptions={unitOptions}
+                    onChange={(field, value) =>
+                      setAddDraft((current) => ({ ...current, [field]: value }))
+                    }
+                    onCategoryOptionsChange={setCategoryOptions}
+                    onUnitOptionsChange={setUnitOptions}
+                    onRequestCategoryEdit={(value) =>
+                      openOptionDialog("category", "edit", value)
+                    }
+                    onRequestCategoryDelete={(value) =>
+                      openOptionDialog("category", "delete", value)
+                    }
+                    onRequestUnitEdit={(value) =>
+                      openOptionDialog("unit", "edit", value)
+                    }
+                    onRequestUnitDelete={(value) =>
+                      openOptionDialog("unit", "delete", value)
+                    }
+                  />
                 </div>
-                <SheetFooter className="border-t">
-                  <SheetClose render={<Button variant="ghost" />}>
-                    Done
+                <SheetFooter className="border-t flex-row justify-end">
+                  <SheetClose render={<Button variant="secondary" />}>
+                    Cancel
                   </SheetClose>
+                  <Button>Save new product</Button>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+
+            <Sheet
+              open={editingProduct !== null}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setEditingProductId(null)
+                  setEditDraft(null)
+                }
+              }}
+            >
+              <SheetContent side="center" className="rounded-none">
+                <SheetHeader className="border-b">
+                  <SheetTitle>Edit product</SheetTitle>
+                </SheetHeader>
+                <div className="p-4">
+                  {editingProduct && editDraft ? (
+                    <ProductForm
+                      draft={editDraft}
+                      categoryOptions={categoryOptions}
+                      unitOptions={unitOptions}
+                      onChange={(field, value) =>
+                        setEditDraft((current) =>
+                          current ? { ...current, [field]: value } : current
+                        )
+                      }
+                      onCategoryOptionsChange={setCategoryOptions}
+                      onUnitOptionsChange={setUnitOptions}
+                      onRequestCategoryEdit={(value) =>
+                        openOptionDialog("category", "edit", value)
+                      }
+                      onRequestCategoryDelete={(value) =>
+                        openOptionDialog("category", "delete", value)
+                      }
+                      onRequestUnitEdit={(value) =>
+                        openOptionDialog("unit", "edit", value)
+                      }
+                      onRequestUnitDelete={(value) =>
+                        openOptionDialog("unit", "delete", value)
+                      }
+                    />
+                  ) : null}
+                </div>
+                <SheetFooter className="border-t flex-row justify-between">
+                  <Button variant="destructive">Delete</Button>
+                  <div className="flex items-center gap-2">
+                    <SheetClose render={<Button variant="secondary" />}>
+                      Cancel
+                    </SheetClose>
+                    <Button>Save changes</Button>
+                  </div>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+
+            <Sheet
+              open={optionDialog !== null}
+              onOpenChange={(open) => {
+                if (!open) {
+                  closeOptionDialog()
+                }
+              }}
+            >
+              <SheetContent side="center" className="rounded-none">
+                <SheetHeader className="border-b">
+                  <SheetTitle>
+                    {optionDialog?.action === "edit" ? "Edit" : "Delete"}{" "}
+                    {optionDialog?.field}
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="grid gap-4 p-4">
+                  {optionDialog?.action === "edit" ? (
+                    <Field label={optionDialog.field === "category" ? "Category" : "Unit"}>
+                      <Input
+                        value={optionDialogValue}
+                        onChange={(event) => setOptionDialogValue(event.target.value)}
+                      />
+                    </Field>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Remove &quot;{optionDialog?.value}&quot; from the{" "}
+                      {optionDialog?.field} options?
+                    </p>
+                  )}
+                </div>
+                <SheetFooter
+                  className={cn(
+                    "border-t flex-row",
+                    optionDialog?.action === "edit"
+                      ? "justify-end"
+                      : "justify-between"
+                  )}
+                >
+                  {optionDialog?.action === "delete" ? (
+                    <Button variant="destructive" onClick={applyOptionDialog}>
+                      Delete
+                    </Button>
+                  ) : null}
+                  <div className="flex items-center gap-2">
+                    <SheetClose render={<Button variant="secondary" />}>
+                      Cancel
+                    </SheetClose>
+                    {optionDialog?.action === "edit" ? (
+                      <Button onClick={applyOptionDialog}>Save</Button>
+                    ) : null}
+                  </div>
                 </SheetFooter>
               </SheetContent>
             </Sheet>
           </div>
-        </div>
-
-        <div className="hidden overflow-x-auto lg:block">
-          <table className="min-w-full border-collapse">
-            <thead>
-              <tr className="bg-secondary text-left text-[11px] text-muted-foreground uppercase">
-                <th className="px-3 py-3 align-middle">Name</th>
-                <th className="px-3 py-3 align-middle">Category</th>
-                <th className="px-3 py-3 align-middle">Buying</th>
-                <th className="px-3 py-3 align-middle">Selling</th>
-                <th className="px-3 py-3 align-middle">Stock qty</th>
-                <th className="px-3 py-3 align-middle">Threshold</th>
-                <th className="px-3 py-3 align-middle">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedProducts.map((product) => (
-                <ProductListRow
-                  key={product.id}
-                  product={product}
-                  currency={business.currency}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="grid gap-3 lg:hidden">
-          {paginatedProducts.map((product) => (
-            <div
-              key={product.id}
-              className="grid gap-3 border border-border p-3 text-left"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium">{product.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {product.category} · {product.unit}
-                  </p>
-                </div>
-                {getStatusBadge(product)}
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                <span>
-                  Buy {formatCurrency(product.buyingPrice, business.currency)}
-                </span>
-                <span>
-                  Sell {formatCurrency(product.sellingPrice, business.currency)}
-                </span>
-                <span>Stock {product.currentStock}</span>
-                <span>Threshold {product.lowStockThreshold}</span>
-              </div>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search product, category, or ID"
+                className="pl-8"
+              />
             </div>
-          ))}
-        </div>
+            <div className="justify-self-end">
+              <div ref={filtersRef} className="relative hidden md:block">
+                <Button
+                  size="default"
+                  variant="outline"
+                  className={cn("h-8", filtersOpen && "border-primary")}
+                  onClick={() => setFiltersOpen((current) => !current)}
+                >
+                  <SlidersHorizontal className="size-4" />
+                  Filters
+                  {selectedStatuses.length > 0
+                    ? ` (${selectedStatuses.length})`
+                    : ""}
+                </Button>
+                {filtersOpen ? (
+                  <div className="absolute top-full right-0 z-20 mt-2 w-44 border border-border bg-popover p-4 shadow-sm">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium">Statuses</p>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => setSelectedStatuses([])}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="grid gap-3 text-xs">
+                      {statusOptions.map((item) => {
+                        const checked = selectedStatuses.includes(item.id)
 
-        {filteredProducts.length === 0 ? (
-          <div className="border border-border bg-muted/20 p-6 text-center text-xs text-muted-foreground">
-            No products match this filter yet.
+                        return (
+                          <label
+                            key={item.id}
+                            className="flex items-center gap-3 text-foreground"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleStatus(item.id)}
+                              className="size-4 rounded-none border border-input accent-[var(--color-primary)]"
+                            />
+                            <span>{item.label}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <Sheet
+                open={mobileFiltersOpen}
+                onOpenChange={setMobileFiltersOpen}
+              >
+                <SheetTrigger
+                  render={
+                    <Button
+                      size="default"
+                      variant="outline"
+                      className="h-8 md:hidden"
+                    >
+                      <SlidersHorizontal className="size-4" />
+                      Filters
+                      {selectedStatuses.length > 0
+                        ? ` (${selectedStatuses.length})`
+                        : ""}
+                    </Button>
+                  }
+                />
+                <SheetContent
+                  side="bottom"
+                  className="max-h-[85svh] gap-0 border-t md:hidden"
+                >
+                  <SheetHeader className="border-b">
+                    <SheetTitle>Filters</SheetTitle>
+                  </SheetHeader>
+                  <div className="grid gap-4 overflow-y-auto p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-medium">Statuses</p>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => setSelectedStatuses([])}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="grid gap-3 text-xs">
+                      {statusOptions.map((item) => {
+                        const checked = selectedStatuses.includes(item.id)
+
+                        return (
+                          <label
+                            key={item.id}
+                            className="flex items-center gap-3 text-foreground"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleStatus(item.id)}
+                              className="size-4 rounded-none border border-input accent-[var(--color-primary)]"
+                            />
+                            <span>{item.label}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <SheetFooter className="border-t">
+                    <SheetClose render={<Button variant="ghost" />}>
+                      Done
+                    </SheetClose>
+                  </SheetFooter>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
-        ) : null}
-      </CardContent>
-      <CardFooter className="justify-between border-t pt-4 text-xs text-muted-foreground">
-        <div>
-          {filteredProducts.length === 0
-            ? "0 results"
-            : `${pageStart + 1}-${Math.min(
-                pageStart + PRODUCTS_PER_PAGE,
-                filteredProducts.length
-              )} of ${filteredProducts.length}`}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="default"
-            className="h-8"
-            disabled={currentPage === 1}
-            onClick={() => setPage((value) => Math.max(1, value - 1))}
-          >
-            Previous
-          </Button>
-          <div className="flex h-8 items-center border border-border px-3">
-            Page {currentPage} of {totalPages}
+
+          <div className="hidden overflow-x-auto lg:block">
+            <table className="min-w-full border-collapse">
+              <thead>
+                <tr className="bg-secondary text-left text-[11px] text-muted-foreground uppercase">
+                  <th className="px-3 py-3 align-middle">Name</th>
+                  <th className="px-3 py-3 align-middle">Category</th>
+                  <th className="px-3 py-3 align-middle">Buying</th>
+                  <th className="px-3 py-3 align-middle">Selling</th>
+                  <th className="px-3 py-3 align-middle">Stock qty</th>
+                  <th className="px-3 py-3 align-middle">Threshold</th>
+                  <th className="px-3 py-3 align-middle">Status</th>
+                  <th className="px-3 py-3 align-middle">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedProducts.map((product) => (
+                  <ProductListRow
+                    key={product.id}
+                    product={product}
+                    currency={business.currency}
+                    onEdit={() => openEditModal(product)}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
-          <Button
-            variant="outline"
-            size="default"
-            className="h-8"
-            disabled={currentPage === totalPages}
-            onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
-          >
-            Next
-          </Button>
-        </div>
-      </CardFooter>
-    </Card>
+
+          <div className="grid gap-3 lg:hidden">
+            {paginatedProducts.map((product) => (
+              <div
+                key={product.id}
+                className="grid gap-3 border border-border p-3 text-left"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">{product.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {product.category} · {product.unit}
+                    </p>
+                  </div>
+                  {getStatusBadge(product)}
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <span>
+                    Buy {formatCurrency(product.buyingPrice, business.currency)}
+                  </span>
+                  <span>
+                    Sell{" "}
+                    {formatCurrency(product.sellingPrice, business.currency)}
+                  </span>
+                  <span>Stock {product.currentStock}</span>
+                  <span>Threshold {product.lowStockThreshold}</span>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    aria-label={`Edit ${product.name}`}
+                    onClick={() => openEditModal(product)}
+                  >
+                    <PencilLine className="size-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {filteredProducts.length === 0 ? (
+            <div className="border border-border bg-muted/20 p-6 text-center text-xs text-muted-foreground">
+              No products match this filter yet.
+            </div>
+          ) : null}
+        </CardContent>
+        <CardFooter className="justify-between border-t pt-4 text-xs text-muted-foreground">
+          <div>
+            {filteredProducts.length === 0
+              ? "0 results"
+              : `${pageStart + 1}-${Math.min(
+                  pageStart + PRODUCTS_PER_PAGE,
+                  filteredProducts.length
+                )} of ${filteredProducts.length}`}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="default"
+              className="h-8"
+              disabled={currentPage === 1}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
+            >
+              Previous
+            </Button>
+            <div className="flex h-8 items-center border border-border px-3">
+              Page {currentPage} of {totalPages}
+            </div>
+            <Button
+              variant="outline"
+              size="default"
+              className="h-8"
+              disabled={currentPage === totalPages}
+              onClick={() =>
+                setPage((value) => Math.min(totalPages, value + 1))
+              }
+            >
+              Next
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
+    </TooltipProvider>
   )
 }
