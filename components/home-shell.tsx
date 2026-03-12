@@ -253,7 +253,7 @@ export function HomeShell() {
     React.useState<ModuleLabel>("Inventory")
 
   return (
-    <div className="min-h-svh overflow-x-hidden bg-background">
+    <div className="min-h-svh overflow-x-hidden bg-gray-100">
       <header className="sticky top-0 z-10 border-b bg-background/95 shadow-sm backdrop-blur">
         <div className="p-4">
           <div className="md:flex md:items-center md:justify-between">
