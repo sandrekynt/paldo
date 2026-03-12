@@ -540,6 +540,23 @@ function ProductForm({
   )
 }
 
+function ProductDetailItem({
+  label,
+  value,
+  align = "left",
+}: {
+  label: string
+  value: React.ReactNode
+  align?: "left" | "right"
+}) {
+  return (
+    <div className={cn("grid gap-1", align === "right" && "text-right")}>
+      <p className="text-[11px] uppercase text-muted-foreground">{label}</p>
+      <div>{value}</div>
+    </div>
+  )
+}
+
 function ProductListRow({
   product,
   currency,
@@ -958,72 +975,143 @@ export function InventoryWorkspace({
                 >
                   {viewingProduct ? (
                     <>
-                      <div className="grid gap-4 border border-border p-4 md:grid-cols-2">
-                        <div className="grid gap-1">
-                          <p className="text-[11px] uppercase text-muted-foreground">
-                            Name
-                          </p>
-                          <p className="text-sm font-medium">
-                            {viewingProduct.name}
-                          </p>
+                      {isMobile ? (
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-6 border border-border p-4">
+                          <div className="grid content-start gap-4">
+                            <ProductDetailItem
+                              label="Name"
+                              value={
+                                <p className="text-sm font-medium">
+                                  {viewingProduct.name}
+                                </p>
+                              }
+                            />
+                            <ProductDetailItem
+                              label="Category"
+                              value={
+                                <p className="text-sm">
+                                  {viewingProduct.category}
+                                </p>
+                              }
+                            />
+                            <ProductDetailItem
+                              label="Buying price"
+                              value={
+                                <p className="text-sm">
+                                  {formatCurrency(
+                                    viewingProduct.buyingPrice,
+                                    business.currency
+                                  )}
+                                </p>
+                              }
+                            />
+                            <ProductDetailItem
+                              label="Stock qty"
+                              value={
+                                <p className="text-sm">
+                                  {viewingProduct.currentStock} {viewingProduct.unit}
+                                </p>
+                              }
+                            />
+                          </div>
+                          <div className="grid content-start gap-4">
+                            <ProductDetailItem
+                              label="Status"
+                              align="right"
+                              value={getStatusBadge(viewingProduct)}
+                            />
+                            <ProductDetailItem
+                              label="Unit"
+                              align="right"
+                              value={<p className="text-sm">{viewingProduct.unit}</p>}
+                            />
+                            <ProductDetailItem
+                              label="Selling price"
+                              align="right"
+                              value={
+                                <p className="text-sm">
+                                  {formatCurrency(
+                                    viewingProduct.sellingPrice,
+                                    business.currency
+                                  )}
+                                </p>
+                              }
+                            />
+                            <ProductDetailItem
+                              label="Threshold"
+                              align="right"
+                              value={
+                                <p className="text-sm">
+                                  {viewingProduct.lowStockThreshold}
+                                </p>
+                              }
+                            />
+                          </div>
                         </div>
-                        <div className="grid gap-1">
-                          <p className="text-[11px] uppercase text-muted-foreground">
-                            Status
-                          </p>
-                          <div>{getStatusBadge(viewingProduct)}</div>
+                      ) : (
+                        <div className="grid gap-4 border border-border p-4 md:grid-cols-2">
+                          <ProductDetailItem
+                            label="Name"
+                            value={
+                              <p className="text-sm font-medium">
+                                {viewingProduct.name}
+                              </p>
+                            }
+                          />
+                          <ProductDetailItem
+                            label="Status"
+                            value={getStatusBadge(viewingProduct)}
+                          />
+                          <ProductDetailItem
+                            label="Category"
+                            value={
+                              <p className="text-sm">{viewingProduct.category}</p>
+                            }
+                          />
+                          <ProductDetailItem
+                            label="Unit"
+                            value={<p className="text-sm">{viewingProduct.unit}</p>}
+                          />
+                          <ProductDetailItem
+                            label="Buying price"
+                            value={
+                              <p className="text-sm">
+                                {formatCurrency(
+                                  viewingProduct.buyingPrice,
+                                  business.currency
+                                )}
+                              </p>
+                            }
+                          />
+                          <ProductDetailItem
+                            label="Selling price"
+                            value={
+                              <p className="text-sm">
+                                {formatCurrency(
+                                  viewingProduct.sellingPrice,
+                                  business.currency
+                                )}
+                              </p>
+                            }
+                          />
+                          <ProductDetailItem
+                            label="Stock qty"
+                            value={
+                              <p className="text-sm">
+                                {viewingProduct.currentStock} {viewingProduct.unit}
+                              </p>
+                            }
+                          />
+                          <ProductDetailItem
+                            label="Threshold"
+                            value={
+                              <p className="text-sm">
+                                {viewingProduct.lowStockThreshold}
+                              </p>
+                            }
+                          />
                         </div>
-                        <div className="grid gap-1">
-                          <p className="text-[11px] uppercase text-muted-foreground">
-                            Category
-                          </p>
-                          <p className="text-sm">{viewingProduct.category}</p>
-                        </div>
-                        <div className="grid gap-1">
-                          <p className="text-[11px] uppercase text-muted-foreground">
-                            Unit
-                          </p>
-                          <p className="text-sm">{viewingProduct.unit}</p>
-                        </div>
-                        <div className="grid gap-1">
-                          <p className="text-[11px] uppercase text-muted-foreground">
-                            Buying price
-                          </p>
-                          <p className="text-sm">
-                            {formatCurrency(
-                              viewingProduct.buyingPrice,
-                              business.currency
-                            )}
-                          </p>
-                        </div>
-                        <div className="grid gap-1">
-                          <p className="text-[11px] uppercase text-muted-foreground">
-                            Selling price
-                          </p>
-                          <p className="text-sm">
-                            {formatCurrency(
-                              viewingProduct.sellingPrice,
-                              business.currency
-                            )}
-                          </p>
-                        </div>
-                        <div className="grid gap-1">
-                          <p className="text-[11px] uppercase text-muted-foreground">
-                            Stock qty
-                          </p>
-                          <p className="text-sm">
-                            {viewingProduct.currentStock} {viewingProduct.unit}
-                          </p>
-                        </div>
-                        <div className="grid gap-1">
-                          <p className="text-[11px] uppercase text-muted-foreground">
-                            Threshold
-                          </p>
-                          <p className="text-sm">
-                            {viewingProduct.lowStockThreshold}
-                          </p>
-                        </div>
-                      </div>
+                      )}
 
                       <div className="grid gap-3">
                         <div className="flex items-center justify-between gap-3">
@@ -1037,48 +1125,101 @@ export function InventoryWorkspace({
                         {viewingProductMovements.length > 0 ? (
                           <div className="grid gap-2">
                             {viewingProductMovements.map((movement) => (
-                              <div
-                                key={movement.id}
-                                className="grid gap-3 border border-border p-3 md:grid-cols-[1fr_auto_auto]"
-                              >
-                                <div className="grid gap-1">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <p className="text-xs font-medium">
-                                      {formatMovementType(movement.type)}
-                                    </p>
-                                    <p className="text-[11px] text-muted-foreground">
-                                      {formatDateTime(movement.createdAt)}
+                              isMobile ? (
+                                <div
+                                  key={movement.id}
+                                  className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border border-border p-3"
+                                >
+                                  <div className="grid gap-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="text-xs font-medium">
+                                        {formatMovementType(movement.type)}
+                                      </p>
+                                      <p className="text-[11px] text-muted-foreground">
+                                        {formatDateTime(movement.createdAt)}
+                                      </p>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                      {movement.notes}
                                     </p>
                                   </div>
-                                  <p className="text-xs text-muted-foreground">
-                                    {movement.notes}
-                                  </p>
+                                  <div className="grid gap-3 text-right text-xs">
+                                    <div className="grid gap-1">
+                                      <p className="text-[11px] uppercase text-muted-foreground">
+                                        Change
+                                      </p>
+                                      <p
+                                        className={cn(
+                                          "font-medium",
+                                          movement.quantityChange > 0 &&
+                                            "text-green-700",
+                                          movement.quantityChange < 0 &&
+                                            "text-red-700"
+                                        )}
+                                      >
+                                        {formatQuantityChange(
+                                          movement.quantityChange
+                                        )}
+                                      </p>
+                                    </div>
+                                    <div className="grid gap-1">
+                                      <p className="text-[11px] uppercase text-muted-foreground">
+                                        Stock
+                                      </p>
+                                      <p className="font-medium">
+                                        {movement.stockBefore} to{" "}
+                                        {movement.stockAfter}
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="grid gap-1 text-xs">
-                                  <p className="text-[11px] uppercase text-muted-foreground">
-                                    Change
-                                  </p>
-                                  <p
-                                    className={cn(
-                                      "font-medium",
-                                      movement.quantityChange > 0 &&
-                                        "text-green-700",
-                                      movement.quantityChange < 0 &&
-                                        "text-red-700"
-                                    )}
-                                  >
-                                    {formatQuantityChange(movement.quantityChange)}
-                                  </p>
+                              ) : (
+                                <div
+                                  key={movement.id}
+                                  className="grid gap-3 border border-border p-3 md:grid-cols-[1fr_auto_auto]"
+                                >
+                                  <div className="grid gap-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="text-xs font-medium">
+                                        {formatMovementType(movement.type)}
+                                      </p>
+                                      <p className="text-[11px] text-muted-foreground">
+                                        {formatDateTime(movement.createdAt)}
+                                      </p>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                      {movement.notes}
+                                    </p>
+                                  </div>
+                                  <div className="grid gap-1 text-xs">
+                                    <p className="text-[11px] uppercase text-muted-foreground">
+                                      Change
+                                    </p>
+                                    <p
+                                      className={cn(
+                                        "font-medium",
+                                        movement.quantityChange > 0 &&
+                                          "text-green-700",
+                                        movement.quantityChange < 0 &&
+                                          "text-red-700"
+                                      )}
+                                    >
+                                      {formatQuantityChange(
+                                        movement.quantityChange
+                                      )}
+                                    </p>
+                                  </div>
+                                  <div className="grid gap-1 text-xs">
+                                    <p className="text-[11px] uppercase text-muted-foreground">
+                                      Stock
+                                    </p>
+                                    <p className="font-medium">
+                                      {movement.stockBefore} to{" "}
+                                      {movement.stockAfter}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="grid gap-1 text-xs">
-                                  <p className="text-[11px] uppercase text-muted-foreground">
-                                    Stock
-                                  </p>
-                                  <p className="font-medium">
-                                    {movement.stockBefore} to {movement.stockAfter}
-                                  </p>
-                                </div>
-                              </div>
+                              )
                             ))}
                           </div>
                         ) : (
