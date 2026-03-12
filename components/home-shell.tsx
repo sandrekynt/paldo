@@ -92,10 +92,6 @@ function MobileBusinessSwitcher({
       <SheetContent side="bottom" className="max-h-[85svh] gap-0 border-t">
         <SheetHeader className="border-b">
           <SheetTitle>Businesses</SheetTitle>
-          <SheetDescription>
-            Inventory dummy states switch per business while backend wiring is
-            still pending.
-          </SheetDescription>
         </SheetHeader>
         <div className="grid gap-3 p-4">
           {demoBusinesses.map((business) => (

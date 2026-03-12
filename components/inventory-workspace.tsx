@@ -70,6 +70,18 @@ type AddProductDraft = ProductFormDraft & {
   openingStock: string
 }
 
+function createEmptyAddProductDraft(): AddProductDraft {
+  return {
+    name: "",
+    category: "",
+    unit: "",
+    buyingPrice: "",
+    sellingPrice: "",
+    openingStock: "",
+    lowStockThreshold: "",
+  }
+}
+
 const PRODUCTS_PER_PAGE = 5
 const defaultStatuses: ProductStatus[] = []
 const statusOptions: { id: ProductStatus; label: string }[] = [
@@ -562,7 +574,10 @@ export function InventoryWorkspace({
     React.useState<ProductStatus[]>(defaultStatuses)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [page, setPage] = React.useState(1)
-  const [addDraft, setAddDraft] = React.useState(inventory.drafts.addProduct)
+  const [addProductOpen, setAddProductOpen] = React.useState(false)
+  const [addDraft, setAddDraft] =
+    React.useState<AddProductDraft>(createEmptyAddProductDraft())
+  const [products, setProducts] = React.useState<DemoProduct[]>(inventory.products)
   const [categoryOptions, setCategoryOptions] = React.useState<string[]>(
     inventory.suggestedCategories
   )
@@ -576,6 +591,7 @@ export function InventoryWorkspace({
   const [editingProductId, setEditingProductId] = React.useState<string | null>(
     null
   )
+  const [deleteProductOpen, setDeleteProductOpen] = React.useState(false)
   const [filtersOpen, setFiltersOpen] = React.useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false)
   const filtersRef = React.useRef<HTMLDivElement>(null)
@@ -598,16 +614,19 @@ export function InventoryWorkspace({
     setSelectedStatuses(defaultStatuses)
     setSearchQuery("")
     setPage(1)
-    setAddDraft(inventory.drafts.addProduct)
+    setAddProductOpen(false)
+    setAddDraft(createEmptyAddProductDraft())
+    setProducts(inventory.products)
     setCategoryOptions(inventory.suggestedCategories)
     setUnitOptions(Array.from(inventoryUnitOptions))
     setOptionDialog(null)
     setOptionDialogValue("")
     setEditDraft(null)
     setEditingProductId(null)
+    setDeleteProductOpen(false)
   }, [inventory])
 
-  const filteredProducts = inventory.products.filter((product) => {
+  const filteredProducts = products.filter((product) => {
     const normalizedQuery = searchQuery.trim().toLowerCase()
     const matchesQuery =
       normalizedQuery.length === 0 ||
@@ -641,7 +660,7 @@ export function InventoryWorkspace({
   )
   const editingProduct =
     editingProductId !== null
-      ? (inventory.products.find(
+      ? (products.find(
           (product) => product.id === editingProductId
         ) ?? null)
       : null
@@ -657,6 +676,34 @@ export function InventoryWorkspace({
   function openEditModal(product: DemoProduct) {
     setEditingProductId(product.id)
     setEditDraft(getDraftFromProduct(product))
+  }
+
+  function handleAddProductOpenChange(open: boolean) {
+    setAddProductOpen(open)
+
+    if (open) {
+      setAddDraft(createEmptyAddProductDraft())
+      return
+    }
+
+    setAddDraft(createEmptyAddProductDraft())
+  }
+
+  function closeEditModal() {
+    setEditingProductId(null)
+    setEditDraft(null)
+    setDeleteProductOpen(false)
+  }
+
+  function confirmDeleteProduct() {
+    if (!editingProductId) {
+      return
+    }
+
+    setProducts((current) =>
+      current.filter((product) => product.id !== editingProductId)
+    )
+    closeEditModal()
   }
 
   function openOptionDialog(
@@ -746,7 +793,7 @@ export function InventoryWorkspace({
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <CardTitle>Product list</CardTitle>
-            <Sheet>
+            <Sheet open={addProductOpen} onOpenChange={handleAddProductOpenChange}>
               <SheetTrigger
                 render={
                   <Button>
@@ -803,8 +850,7 @@ export function InventoryWorkspace({
               open={editingProduct !== null}
               onOpenChange={(open) => {
                 if (!open) {
-                  setEditingProductId(null)
-                  setEditDraft(null)
+                  closeEditModal()
                 }
               }}
             >
@@ -848,12 +894,53 @@ export function InventoryWorkspace({
                   ) : null}
                 </div>
                 <SheetFooter className="flex-row justify-between border-t">
-                  <Button variant="destructive">Delete</Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setDeleteProductOpen(true)}
+                  >
+                    Delete
+                  </Button>
                   <div className="flex items-center gap-2">
                     <SheetClose render={<Button variant="secondary" />}>
                       Cancel
                     </SheetClose>
                     <Button>Save changes</Button>
+                  </div>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+
+            <Sheet
+              open={deleteProductOpen}
+              onOpenChange={setDeleteProductOpen}
+            >
+              <SheetContent
+                side={isMobile ? "bottom" : "center"}
+                className={cn(
+                  "rounded-none",
+                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
+                )}
+              >
+                <SheetHeader className="border-b">
+                  <SheetTitle>Delete product</SheetTitle>
+                </SheetHeader>
+                <div className="grid gap-4 p-4">
+                  <p className="text-xs text-muted-foreground">
+                    Delete{" "}
+                    <span className="font-semibold text-foreground">
+                      {editingProduct?.name ?? "this product"}
+                    </span>
+                    ?
+                  </p>
+                </div>
+                <SheetFooter className="flex-row justify-end border-t">
+                  <div className="flex items-center gap-2">
+                    <SheetClose render={<Button variant="secondary" />}>
+                      Cancel
+                    </SheetClose>
+                    <Button variant="destructive" onClick={confirmDeleteProduct}>
+                      Delete
+                    </Button>
                   </div>
                 </SheetFooter>
               </SheetContent>
