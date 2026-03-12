@@ -134,7 +134,7 @@ function ProductForm({
             onChange={(event) => onChange("name", event.target.value)}
           />
         </Field>
-        <Field label="Category" hint="free text">
+        <Field label="Category">
           <Input
             value={draft.category}
             onChange={(event) => onChange("category", event.target.value)}
