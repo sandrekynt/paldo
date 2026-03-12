@@ -17,7 +17,6 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -26,12 +25,14 @@ import { demoBusinesses } from "@/lib/dummy-data"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { label: "Home", icon: LayoutGrid, active: false },
-  { label: "Inventory", icon: Package2, active: true },
-  { label: "POS", icon: CreditCard, active: false },
-  { label: "Utang", icon: HandCoins, active: false },
-  { label: "Payroll", icon: Wallet, active: false },
-]
+  { label: "Home", icon: LayoutGrid },
+  { label: "Inventory", icon: Package2 },
+  { label: "POS", icon: CreditCard },
+  { label: "Utang", icon: HandCoins },
+  { label: "Payroll", icon: Wallet },
+] as const
+
+type ModuleLabel = (typeof navItems)[number]["label"]
 
 type BusinessSelectorProps = {
   selectedBusinessId: string
@@ -202,20 +203,36 @@ function DesktopBusinessSwitcher({
   )
 }
 
-function MobileBottomNav() {
+function ModulePlaceholder({ label }: { label: ModuleLabel }) {
+  return (
+    <Card className="min-h-[calc(100svh-12rem)] items-center justify-center p-4">
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+    </Card>
+  )
+}
+
+function MobileBottomNav({
+  selectedModule,
+  onSelect,
+}: {
+  selectedModule: ModuleLabel
+  onSelect: (module: ModuleLabel) => void
+}) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 shadow-sm backdrop-blur md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-5">
         {navItems.map((item) => {
           const Icon = item.icon
+          const isActive = item.label === selectedModule
 
           return (
             <button
               key={item.label}
               type="button"
+              onClick={() => onSelect(item.label)}
               className={cn(
                 "flex min-h-16 flex-col items-center justify-center gap-1 px-2 text-[11px]",
-                item.active ? "text-foreground" : "text-muted-foreground"
+                isActive ? "bg-primary text-white" : "text-muted-foreground"
               )}
             >
               <Icon className="size-4" />
@@ -232,6 +249,8 @@ export function HomeShell() {
   const [selectedBusinessId, setSelectedBusinessId] = React.useState(
     demoBusinesses[0].id
   )
+  const [selectedModule, setSelectedModule] =
+    React.useState<ModuleLabel>("Inventory")
 
   return (
     <div className="min-h-svh overflow-x-hidden bg-background">
@@ -252,8 +271,14 @@ export function HomeShell() {
               {navItems.map((item) => (
                 <Button
                   key={item.label}
-                  variant={item.active ? "secondary" : "ghost"}
+                  type="button"
+                  variant="ghost"
                   size="sm"
+                  onClick={() => setSelectedModule(item.label)}
+                  className={cn(
+                    item.label === selectedModule &&
+                      "bg-primary text-white hover:bg-primary hover:text-white"
+                  )}
                 >
                   <item.icon className="size-4" />
                   {item.label}
@@ -265,10 +290,17 @@ export function HomeShell() {
       </header>
 
       <main className="min-h-[calc(100svh-8rem)] w-full p-4 pb-24 md:pb-4">
-        <InventoryWorkspace selectedBusinessId={selectedBusinessId} />
+        {selectedModule === "Inventory" ? (
+          <InventoryWorkspace selectedBusinessId={selectedBusinessId} />
+        ) : (
+          <ModulePlaceholder label={selectedModule} />
+        )}
       </main>
 
-      <MobileBottomNav />
+      <MobileBottomNav
+        selectedModule={selectedModule}
+        onSelect={setSelectedModule}
+      />
     </div>
   )
 }
