@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { PackagePlus, Search } from "lucide-react"
+import { PackagePlus, Search, SlidersHorizontal } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,7 +34,7 @@ type InventoryWorkspaceProps = {
   selectedBusinessId: string
 }
 
-type StockFilter = "all" | "low" | "healthy" | "archived"
+type ProductStatus = "low" | "healthy" | "archived"
 
 type ProductDraft = {
   name: string
@@ -47,6 +47,7 @@ type ProductDraft = {
 }
 
 const PRODUCTS_PER_PAGE = 5
+const defaultStatuses: ProductStatus[] = ["low", "healthy"]
 
 function formatCurrency(value: number, currency: string) {
   return new Intl.NumberFormat("en-PH", {
@@ -57,7 +58,9 @@ function formatCurrency(value: number, currency: string) {
 }
 
 function getStatusBadge(product: DemoProduct) {
-  if (!product.isActive) {
+  const status = getProductStatus(product)
+
+  if (status === "archived") {
     return (
       <Badge variant="outline" className="border-dashed text-muted-foreground">
         Archived
@@ -65,7 +68,7 @@ function getStatusBadge(product: DemoProduct) {
     )
   }
 
-  if (product.currentStock <= product.lowStockThreshold) {
+  if (status === "low") {
     return (
       <Badge className="border-transparent bg-red-100 text-red-700">
         Low stock
@@ -74,6 +77,18 @@ function getStatusBadge(product: DemoProduct) {
   }
 
   return <Badge variant="success">Healthy</Badge>
+}
+
+function getProductStatus(product: DemoProduct): ProductStatus {
+  if (!product.isActive) {
+    return "archived"
+  }
+
+  if (product.currentStock <= product.lowStockThreshold) {
+    return "low"
+  }
+
+  return "healthy"
 }
 
 function Field({
@@ -109,7 +124,10 @@ function ProductForm({
     <div className="grid gap-4">
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Name">
-          <Input value={draft.name} onChange={(event) => onChange("name", event.target.value)} />
+          <Input
+            value={draft.name}
+            onChange={(event) => onChange("name", event.target.value)}
+          />
         </Field>
         <Field label="Category" hint="free text">
           <Input
@@ -138,7 +156,9 @@ function ProductForm({
         <Field label="Low stock threshold">
           <Input
             value={draft.lowStockThreshold}
-            onChange={(event) => onChange("lowStockThreshold", event.target.value)}
+            onChange={(event) =>
+              onChange("lowStockThreshold", event.target.value)
+            }
           />
         </Field>
       </div>
@@ -149,7 +169,7 @@ function ProductForm({
             <button
               key={category}
               type="button"
-              className="border-border hover:bg-muted rounded-none border px-2 py-1 text-xs"
+              className="rounded-none border border-border px-2 py-1 text-xs hover:bg-muted"
               onClick={() => onChange("category", category)}
             >
               {category}
@@ -165,8 +185,9 @@ function ProductForm({
               key={unit}
               type="button"
               className={cn(
-                "border-border rounded-none border px-2 py-1 text-xs capitalize",
-                draft.unit === unit && "border-primary bg-primary/10 text-primary"
+                "rounded-none border border-border px-2 py-1 text-xs capitalize",
+                draft.unit === unit &&
+                  "border-primary bg-primary/10 text-primary"
               )}
               onClick={() => onChange("unit", unit)}
             >
@@ -187,14 +208,20 @@ function ProductListRow({
   currency: string
 }) {
   return (
-    <tr className="border-border border-t">
+    <tr className="border-t border-border">
       <td className="px-3 py-3">
         <p className="text-xs font-medium">{product.name}</p>
         <p className="text-[11px] text-muted-foreground">{product.id}</p>
       </td>
-      <td className="px-3 py-3 text-xs text-muted-foreground">{product.category}</td>
-      <td className="px-3 py-3 text-xs">{formatCurrency(product.buyingPrice, currency)}</td>
-      <td className="px-3 py-3 text-xs">{formatCurrency(product.sellingPrice, currency)}</td>
+      <td className="px-3 py-3 text-xs text-muted-foreground">
+        {product.category}
+      </td>
+      <td className="px-3 py-3 text-xs">
+        {formatCurrency(product.buyingPrice, currency)}
+      </td>
+      <td className="px-3 py-3 text-xs">
+        {formatCurrency(product.sellingPrice, currency)}
+      </td>
       <td className="px-3 py-3 text-xs">
         <div className="flex items-center gap-2">
           <span>{product.currentStock}</span>
@@ -214,13 +241,30 @@ export function InventoryWorkspace({
     demoBusinesses.find((entry) => entry.id === selectedBusinessId) ??
     demoBusinesses[0]
   const inventory = getInventoryDemo(business.id)
-  const [stockFilter, setStockFilter] = React.useState<StockFilter>("all")
+  const [selectedStatuses, setSelectedStatuses] =
+    React.useState<ProductStatus[]>(defaultStatuses)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [page, setPage] = React.useState(1)
   const [addDraft, setAddDraft] = React.useState(inventory.drafts.addProduct)
+  const [filtersOpen, setFiltersOpen] = React.useState(false)
+  const filtersRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
-    setStockFilter("all")
+    function handlePointerDown(event: MouseEvent) {
+      if (!filtersRef.current?.contains(event.target as Node)) {
+        setFiltersOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown)
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    setSelectedStatuses(defaultStatuses)
     setSearchQuery("")
     setPage(1)
     setAddDraft(inventory.drafts.addProduct)
@@ -238,30 +282,20 @@ export function InventoryWorkspace({
       return false
     }
 
-    if (stockFilter === "archived") {
-      return !product.isActive
-    }
-
-    if (!product.isActive) {
-      return false
-    }
-
-    if (stockFilter === "low") {
-      return product.currentStock <= product.lowStockThreshold
-    }
-
-    if (stockFilter === "healthy") {
-      return product.currentStock > product.lowStockThreshold
-    }
-
-    return true
+    return (
+      selectedStatuses.length === 0 ||
+      selectedStatuses.includes(getProductStatus(product))
+    )
   })
 
   React.useEffect(() => {
     setPage(1)
-  }, [searchQuery, stockFilter, selectedBusinessId])
+  }, [searchQuery, selectedStatuses, selectedBusinessId])
 
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE))
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE)
+  )
   const currentPage = Math.min(page, totalPages)
   const pageStart = (currentPage - 1) * PRODUCTS_PER_PAGE
   const paginatedProducts = filteredProducts.slice(
@@ -271,41 +305,43 @@ export function InventoryWorkspace({
 
   return (
     <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <CardTitle>Product list</CardTitle>
-            <Sheet>
-              <SheetTrigger
-                render={
-                  <Button>
-                    <PackagePlus className="size-4" />
-                    Add product
-                  </Button>
-                }
-              />
-              <SheetContent side="center" className="rounded-none">
-                <SheetHeader className="border-b">
-                  <SheetTitle>Add product</SheetTitle>
-                </SheetHeader>
-                <div className="p-4">
-                  <ProductForm
-                    draft={addDraft}
-                    suggestedCategories={inventory.suggestedCategories}
-                    onChange={(field, value) =>
-                      setAddDraft((current) => ({ ...current, [field]: value }))
-                    }
-                  />
-                </div>
-                <SheetFooter className="border-t sm:flex-row sm:justify-between">
-                  <SheetClose render={<Button variant="ghost" />}>Cancel</SheetClose>
-                  <Button>Save new product</Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+      <CardHeader>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <CardTitle>Product list</CardTitle>
+          <Sheet>
+            <SheetTrigger
+              render={
+                <Button>
+                  <PackagePlus className="size-4" />
+                  Add product
+                </Button>
+              }
+            />
+            <SheetContent side="center" className="rounded-none">
+              <SheetHeader className="border-b">
+                <SheetTitle>Add product</SheetTitle>
+              </SheetHeader>
+              <div className="p-4">
+                <ProductForm
+                  draft={addDraft}
+                  suggestedCategories={inventory.suggestedCategories}
+                  onChange={(field, value) =>
+                    setAddDraft((current) => ({ ...current, [field]: value }))
+                  }
+                />
+              </div>
+              <SheetFooter className="border-t sm:flex-row sm:justify-between">
+                <SheetClose render={<Button variant="ghost" />}>
+                  Cancel
+                </SheetClose>
+                <Button>Save new product</Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -315,40 +351,79 @@ export function InventoryWorkspace({
               className="pl-8"
             />
           </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: "all", label: "All active" },
-              { id: "low", label: "Low stock" },
-              { id: "healthy", label: "Healthy" },
-              { id: "archived", label: "Archived" },
-            ].map((item) => (
-              <Button
-                key={item.id}
-                size="default"
-                variant="outline"
-                className={cn(
-                  "h-8",
-                  stockFilter === item.id && "border-primary"
-                )}
-                onClick={() => setStockFilter(item.id as StockFilter)}
-              >
-                {item.label}
-              </Button>
-            ))}
+          <div ref={filtersRef} className="relative">
+            <Button
+              size="default"
+              variant="outline"
+              className={cn("h-8", filtersOpen && "border-primary")}
+              onClick={() => setFiltersOpen((current) => !current)}
+            >
+              <SlidersHorizontal className="size-4" />
+              Filters
+              {selectedStatuses.length > 0
+                ? ` (${selectedStatuses.length})`
+                : ""}
+            </Button>
+            {filtersOpen ? (
+              <div className="absolute top-full right-0 z-20 mt-2 w-36 border border-border bg-popover p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-xs font-medium">Statuses</p>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => setSelectedStatuses([])}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="grid gap-3 text-xs">
+                  {[
+                    { id: "low", label: "Low stock" },
+                    { id: "healthy", label: "Healthy" },
+                    { id: "archived", label: "Archived" },
+                  ].map((item) => {
+                    const checked = selectedStatuses.includes(
+                      item.id as ProductStatus
+                    )
+
+                    return (
+                      <label
+                        key={item.id}
+                        className="flex items-center gap-3 text-foreground"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setSelectedStatuses((current) =>
+                              checked
+                                ? current.filter((status) => status !== item.id)
+                                : [...current, item.id as ProductStatus]
+                            )
+                          }
+                          className="size-4 rounded-none border border-input accent-[var(--color-primary)]"
+                        />
+                        <span>{item.label}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
         <div className="hidden overflow-x-auto lg:block">
           <table className="min-w-full border-collapse">
             <thead>
-              <tr className="text-left text-[11px] uppercase text-muted-foreground">
-                <th className="px-3 pb-3">Name</th>
-                <th className="px-3 pb-3">Category</th>
-                <th className="px-3 pb-3">Buying</th>
-                <th className="px-3 pb-3">Selling</th>
-                <th className="px-3 pb-3">Stock qty</th>
-                <th className="px-3 pb-3">Threshold</th>
-                <th className="px-3 pb-3">Status</th>
+              <tr className="bg-secondary text-left text-[11px] text-muted-foreground uppercase">
+                <th className="px-3 py-3 align-middle">Name</th>
+                <th className="px-3 py-3 align-middle">Category</th>
+                <th className="px-3 py-3 align-middle">Buying</th>
+                <th className="px-3 py-3 align-middle">Selling</th>
+                <th className="px-3 py-3 align-middle">Stock qty</th>
+                <th className="px-3 py-3 align-middle">Threshold</th>
+                <th className="px-3 py-3 align-middle">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -365,7 +440,10 @@ export function InventoryWorkspace({
 
         <div className="grid gap-3 lg:hidden">
           {paginatedProducts.map((product) => (
-            <div key={product.id} className="border-border grid gap-3 border p-3 text-left">
+            <div
+              key={product.id}
+              className="grid gap-3 border border-border p-3 text-left"
+            >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-medium">{product.name}</p>
@@ -376,8 +454,12 @@ export function InventoryWorkspace({
                 {getStatusBadge(product)}
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                <span>Buy {formatCurrency(product.buyingPrice, business.currency)}</span>
-                <span>Sell {formatCurrency(product.sellingPrice, business.currency)}</span>
+                <span>
+                  Buy {formatCurrency(product.buyingPrice, business.currency)}
+                </span>
+                <span>
+                  Sell {formatCurrency(product.sellingPrice, business.currency)}
+                </span>
                 <span>Stock {product.currentStock}</span>
                 <span>Threshold {product.lowStockThreshold}</span>
               </div>
@@ -386,46 +468,44 @@ export function InventoryWorkspace({
         </div>
 
         {filteredProducts.length === 0 ? (
-          <div className="border-border bg-muted/20 border p-6 text-center text-xs text-muted-foreground">
+          <div className="border border-border bg-muted/20 p-6 text-center text-xs text-muted-foreground">
             No products match this filter yet.
           </div>
         ) : null}
-        </CardContent>
-        <CardFooter className="justify-between border-t pt-4 text-xs text-muted-foreground">
-          <div>
-            {filteredProducts.length === 0
-              ? "0 results"
-              : `${pageStart + 1}-${Math.min(
-                  pageStart + PRODUCTS_PER_PAGE,
-                  filteredProducts.length
-                )} of ${filteredProducts.length}`}
+      </CardContent>
+      <CardFooter className="justify-between border-t pt-4 text-xs text-muted-foreground">
+        <div>
+          {filteredProducts.length === 0
+            ? "0 results"
+            : `${pageStart + 1}-${Math.min(
+                pageStart + PRODUCTS_PER_PAGE,
+                filteredProducts.length
+              )} of ${filteredProducts.length}`}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="default"
+            className="h-8"
+            disabled={currentPage === 1}
+            onClick={() => setPage((value) => Math.max(1, value - 1))}
+          >
+            Previous
+          </Button>
+          <div className="flex h-8 items-center border border-border px-3">
+            Page {currentPage} of {totalPages}
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="default"
-              className="h-8"
-              disabled={currentPage === 1}
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-            >
-              Previous
-            </Button>
-            <div className="border-border flex h-8 items-center border px-3">
-              Page {currentPage} of {totalPages}
-            </div>
-            <Button
-              variant="outline"
-              size="default"
-              className="h-8"
-              disabled={currentPage === totalPages}
-              onClick={() =>
-                setPage((value) => Math.min(totalPages, value + 1))
-              }
-            >
-              Next
-            </Button>
-          </div>
-        </CardFooter>
+          <Button
+            variant="outline"
+            size="default"
+            className="h-8"
+            disabled={currentPage === totalPages}
+            onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+          >
+            Next
+          </Button>
+        </div>
+      </CardFooter>
     </Card>
   )
 }

@@ -108,7 +108,7 @@ function MobileBusinessSwitcher({
                 className={cn(
                   "gap-0 p-4",
                   business.id === selectedBusinessId &&
-                    "border-primary bg-primary/5"
+                    "border-primary bg-primary/10"
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -178,13 +178,14 @@ function DesktopBusinessSwitcher({
                 }}
                 className={cn(
                   "text-left transition-colors hover:bg-muted",
-                  business.id === selectedBusinessId && "bg-primary/5"
+                  business.id === selectedBusinessId && "bg-primary/10"
                 )}
               >
                 <Card
                   className={cn(
                     "gap-0 p-4",
-                    business.id === selectedBusinessId && "border-primary"
+                    business.id === selectedBusinessId &&
+                      "border-primary bg-primary/10"
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
