@@ -291,7 +291,7 @@ export function HomeShell() {
                 className="rounded-full text-[14px] text-muted-foreground hover:bg-primary hover:text-white"
                 aria-label="Notifications"
               >
-                <Bell className="size-5" />
+                <Bell className="size-4" />
               </Button>
               <Button
                 type="button"
@@ -300,7 +300,7 @@ export function HomeShell() {
                 className="rounded-full text-[14px] text-muted-foreground hover:bg-primary hover:text-white"
                 aria-label="Profile"
               >
-                <User className="size-5" />
+                <User className="size-4" />
               </Button>
             </div>
           </div>
