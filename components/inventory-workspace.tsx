@@ -575,9 +575,12 @@ export function InventoryWorkspace({
   const [searchQuery, setSearchQuery] = React.useState("")
   const [page, setPage] = React.useState(1)
   const [addProductOpen, setAddProductOpen] = React.useState(false)
-  const [addDraft, setAddDraft] =
-    React.useState<AddProductDraft>(createEmptyAddProductDraft())
-  const [products, setProducts] = React.useState<DemoProduct[]>(inventory.products)
+  const [addDraft, setAddDraft] = React.useState<AddProductDraft>(
+    createEmptyAddProductDraft()
+  )
+  const [products, setProducts] = React.useState<DemoProduct[]>(
+    inventory.products
+  )
   const [categoryOptions, setCategoryOptions] = React.useState<string[]>(
     inventory.suggestedCategories
   )
@@ -587,7 +590,9 @@ export function InventoryWorkspace({
   const [optionDialog, setOptionDialog] =
     React.useState<OptionDialogState | null>(null)
   const [optionDialogValue, setOptionDialogValue] = React.useState("")
-  const [editDraft, setEditDraft] = React.useState<ProductFormDraft | null>(null)
+  const [editDraft, setEditDraft] = React.useState<ProductFormDraft | null>(
+    null
+  )
   const [editingProductId, setEditingProductId] = React.useState<string | null>(
     null
   )
@@ -660,9 +665,7 @@ export function InventoryWorkspace({
   )
   const editingProduct =
     editingProductId !== null
-      ? (products.find(
-          (product) => product.id === editingProductId
-        ) ?? null)
+      ? (products.find((product) => product.id === editingProductId) ?? null)
       : null
 
   function toggleStatus(status: ProductStatus) {
@@ -793,7 +796,10 @@ export function InventoryWorkspace({
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <CardTitle>Product list</CardTitle>
-            <Sheet open={addProductOpen} onOpenChange={handleAddProductOpenChange}>
+            <Sheet
+              open={addProductOpen}
+              onOpenChange={handleAddProductOpenChange}
+            >
               <SheetTrigger
                 render={
                   <Button>
@@ -910,10 +916,7 @@ export function InventoryWorkspace({
               </SheetContent>
             </Sheet>
 
-            <Sheet
-              open={deleteProductOpen}
-              onOpenChange={setDeleteProductOpen}
-            >
+            <Sheet open={deleteProductOpen} onOpenChange={setDeleteProductOpen}>
               <SheetContent
                 side={isMobile ? "bottom" : "center"}
                 className={cn(
@@ -938,7 +941,10 @@ export function InventoryWorkspace({
                     <SheetClose render={<Button variant="secondary" />}>
                       Cancel
                     </SheetClose>
-                    <Button variant="destructive" onClick={confirmDeleteProduct}>
+                    <Button
+                      variant="destructive"
+                      onClick={confirmDeleteProduct}
+                    >
                       Delete
                     </Button>
                   </div>
