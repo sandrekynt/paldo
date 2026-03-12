@@ -106,7 +106,7 @@ export type DemoInventoryDrafts = {
     unit: InventoryUnit
     buyingPrice: string
     sellingPrice: string
-    currentStock: string
+    openingStock: string
     lowStockThreshold: string
   }
   restock: {
@@ -473,7 +473,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         unit: "bottle",
         buyingPrice: "28.00",
         sellingPrice: "35.00",
-        currentStock: "12",
+        openingStock: "12",
         lowStockThreshold: "5",
       },
       restock: {
@@ -792,7 +792,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         unit: "pack",
         buyingPrice: "42.00",
         sellingPrice: "65.00",
-        currentStock: "10",
+        openingStock: "10",
         lowStockThreshold: "4",
       },
       restock: {
@@ -1125,7 +1125,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         unit: "sack",
         buyingPrice: "178.00",
         sellingPrice: "220.00",
-        currentStock: "18",
+        openingStock: "18",
         lowStockThreshold: "8",
       },
       restock: {

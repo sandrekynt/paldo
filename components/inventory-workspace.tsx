@@ -57,14 +57,17 @@ type OptionDialogState = {
   value: string
 }
 
-type ProductDraft = {
+type ProductFormDraft = {
   name: string
   category: string
   unit: string
   buyingPrice: string
   sellingPrice: string
-  currentStock: string
   lowStockThreshold: string
+}
+
+type AddProductDraft = ProductFormDraft & {
+  openingStock: string
 }
 
 const PRODUCTS_PER_PAGE = 5
@@ -83,14 +86,13 @@ function formatCurrency(value: number, currency: string) {
   }).format(value)
 }
 
-function getDraftFromProduct(product: DemoProduct): ProductDraft {
+function getDraftFromProduct(product: DemoProduct): ProductFormDraft {
   return {
     name: product.name,
     category: product.category,
     unit: product.unit,
     buyingPrice: product.buyingPrice.toFixed(2),
     sellingPrice: product.sellingPrice.toFixed(2),
-    currentStock: String(product.currentStock),
     lowStockThreshold: String(product.lowStockThreshold),
   }
 }
@@ -390,6 +392,7 @@ function SearchableOptionSelect({
 }
 
 function ProductForm({
+  mode,
   draft,
   categoryOptions,
   unitOptions,
@@ -401,10 +404,11 @@ function ProductForm({
   onRequestUnitEdit,
   onRequestUnitDelete,
 }: {
-  draft: ProductDraft
+  mode: "add" | "edit"
+  draft: ProductFormDraft | AddProductDraft
   categoryOptions: string[]
   unitOptions: string[]
-  onChange: (field: keyof ProductDraft, value: string) => void
+  onChange: (field: string, value: string) => void
   onCategoryOptionsChange: (values: string[]) => void
   onUnitOptionsChange: (values: string[]) => void
   onRequestCategoryEdit: (value: string) => void
@@ -455,12 +459,14 @@ function ProductForm({
             onChange={(event) => onChange("sellingPrice", event.target.value)}
           />
         </Field>
-        <Field label="Current stock">
-          <Input
-            value={draft.currentStock}
-            onChange={(event) => onChange("currentStock", event.target.value)}
-          />
-        </Field>
+        {mode === "add" ? (
+          <Field label="Opening stock">
+            <Input
+              value={"openingStock" in draft ? draft.openingStock : ""}
+              onChange={(event) => onChange("openingStock", event.target.value)}
+            />
+          </Field>
+        ) : null}
         <Field label="Low stock threshold">
           <Input
             value={draft.lowStockThreshold}
@@ -549,7 +555,7 @@ export function InventoryWorkspace({
   const [optionDialog, setOptionDialog] =
     React.useState<OptionDialogState | null>(null)
   const [optionDialogValue, setOptionDialogValue] = React.useState("")
-  const [editDraft, setEditDraft] = React.useState<ProductDraft | null>(null)
+  const [editDraft, setEditDraft] = React.useState<ProductFormDraft | null>(null)
   const [editingProductId, setEditingProductId] = React.useState<string | null>(
     null
   )
@@ -744,6 +750,7 @@ export function InventoryWorkspace({
                 </SheetHeader>
                 <div className="p-4">
                   <ProductForm
+                    mode="add"
                     draft={addDraft}
                     categoryOptions={categoryOptions}
                     unitOptions={unitOptions}
@@ -797,6 +804,7 @@ export function InventoryWorkspace({
                 <div className="p-4">
                   {editingProduct && editDraft ? (
                     <ProductForm
+                      mode="edit"
                       draft={editDraft}
                       categoryOptions={categoryOptions}
                       unitOptions={unitOptions}
