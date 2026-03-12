@@ -42,6 +42,7 @@ import {
   inventoryUnitOptions,
   type DemoProduct,
 } from "@/lib/dummy-data"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 
 type InventoryWorkspaceProps = {
@@ -543,6 +544,7 @@ function ProductListRow({
 export function InventoryWorkspace({
   selectedBusinessId,
 }: InventoryWorkspaceProps) {
+  const isMobile = useIsMobile()
   const business =
     demoBusinesses.find((entry) => entry.id === selectedBusinessId) ??
     demoBusinesses[0]
@@ -744,7 +746,13 @@ export function InventoryWorkspace({
                   </Button>
                 }
               />
-              <SheetContent side="center" className="rounded-none">
+              <SheetContent
+                side={isMobile ? "bottom" : "center"}
+                className={cn(
+                  "rounded-none",
+                  isMobile && "max-h-[85svh] gap-0 border-t overflow-y-auto"
+                )}
+              >
                 <SheetHeader className="border-b">
                   <SheetTitle>Add product</SheetTitle>
                 </SheetHeader>
@@ -790,7 +798,13 @@ export function InventoryWorkspace({
                 }
               }}
             >
-              <SheetContent side="center" className="rounded-none">
+              <SheetContent
+                side={isMobile ? "bottom" : "center"}
+                className={cn(
+                  "rounded-none",
+                  isMobile && "max-h-[85svh] gap-0 border-t overflow-y-auto"
+                )}
+              >
                 <SheetHeader className="border-b">
                   <SheetTitle>Edit product</SheetTitle>
                 </SheetHeader>
@@ -842,7 +856,13 @@ export function InventoryWorkspace({
                 }
               }}
             >
-              <SheetContent side="center" className="rounded-none">
+              <SheetContent
+                side={isMobile ? "bottom" : "center"}
+                className={cn(
+                  "rounded-none",
+                  isMobile && "max-h-[85svh] gap-0 border-t overflow-y-auto"
+                )}
+              >
                 <SheetHeader className="border-b">
                   <SheetTitle>
                     {optionDialog?.action === "edit" ? "Edit" : "Delete"}{" "}
