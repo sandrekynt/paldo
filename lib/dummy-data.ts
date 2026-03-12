@@ -320,6 +320,18 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         notes: "Voided sale after duplicate scan.",
         createdAt: "2026-03-11T12:20:00+08:00",
       },
+      {
+        id: "mm-move-6",
+        productId: "mm-prod-4",
+        businessId: "paldo-1",
+        type: "sale",
+        quantityChange: -13,
+        stockBefore: 13,
+        stockAfter: 0,
+        referenceId: "txn-4412",
+        notes: "Lunch-hour canned goods rush emptied the shelf.",
+        createdAt: "2026-03-12T10:55:00+08:00",
+      },
     ],
     restocks: [
       {
@@ -639,6 +651,18 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         notes: "Cancelled duplicate booking from phone order.",
         createdAt: "2026-03-10T09:12:00+08:00",
       },
+      {
+        id: "wr-move-6",
+        productId: "wr-prod-4",
+        businessId: "paldo-2",
+        type: "sale",
+        quantityChange: -6,
+        stockBefore: 6,
+        stockAfter: 0,
+        referenceId: "txn-8814",
+        notes: "All blue jug deposits were released for route dispatch.",
+        createdAt: "2026-03-12T10:05:00+08:00",
+      },
     ],
     restocks: [
       {
@@ -957,6 +981,18 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         referenceId: "txn-9877",
         notes: "Cancelled duplicate order from messenger quote.",
         createdAt: "2026-03-10T15:50:00+08:00",
+      },
+      {
+        id: "vt-move-6",
+        productId: "vt-prod-2",
+        businessId: "paldo-3",
+        type: "sale",
+        quantityChange: -4,
+        stockBefore: 4,
+        stockAfter: 0,
+        referenceId: "txn-9911",
+        notes: "Last tie wire kilos pulled for same-day contractor delivery.",
+        createdAt: "2026-03-12T11:15:00+08:00",
       },
     ],
     restocks: [

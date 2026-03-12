@@ -4,6 +4,7 @@ import * as React from "react"
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 import {
   ChevronDown,
+  Eye,
   PackagePlus,
   PencilLine,
   Search,
@@ -41,6 +42,7 @@ import {
   getInventoryDemo,
   inventoryUnitOptions,
   type DemoProduct,
+  type DemoStockMovement,
 } from "@/lib/dummy-data"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -97,6 +99,35 @@ function formatCurrency(value: number, currency: string) {
     currency,
     minimumFractionDigits: 2,
   }).format(value)
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value))
+}
+
+function formatMovementType(type: DemoStockMovement["type"]) {
+  if (type === "restock") {
+    return "Restock"
+  }
+
+  if (type === "sale") {
+    return "Sale"
+  }
+
+  if (type === "adjustment") {
+    return "Adjustment"
+  }
+
+  return "Void"
+}
+
+function formatQuantityChange(value: number) {
+  return value > 0 ? `+${value}` : String(value)
 }
 
 function getDraftFromProduct(product: DemoProduct): ProductFormDraft {
@@ -512,10 +543,12 @@ function ProductForm({
 function ProductListRow({
   product,
   currency,
+  onView,
   onEdit,
 }: {
   product: DemoProduct
   currency: string
+  onView: () => void
   onEdit: () => void
 }) {
   return (
@@ -542,21 +575,38 @@ function ProductListRow({
       <td className="px-3 py-3 text-xs">{product.lowStockThreshold}</td>
       <td className="px-3 py-3">{getStatusBadge(product)}</td>
       <td className="px-3 py-3 text-center">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label={`Edit ${product.name}`}
-                onClick={onEdit}
-              />
-            }
-          >
-            <PencilLine className="size-3.5" />
-          </TooltipTrigger>
-          <TooltipContent>Edit</TooltipContent>
-        </Tooltip>
+        <div className="flex items-center justify-center gap-1">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={`View ${product.name}`}
+                  onClick={onView}
+                />
+              }
+            >
+              <Eye className="size-3.5" />
+            </TooltipTrigger>
+            <TooltipContent>View</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={`Edit ${product.name}`}
+                  onClick={onEdit}
+                />
+              }
+            >
+              <PencilLine className="size-3.5" />
+            </TooltipTrigger>
+            <TooltipContent>Edit</TooltipContent>
+          </Tooltip>
+        </div>
       </td>
     </tr>
   )
@@ -590,6 +640,9 @@ export function InventoryWorkspace({
   const [optionDialog, setOptionDialog] =
     React.useState<OptionDialogState | null>(null)
   const [optionDialogValue, setOptionDialogValue] = React.useState("")
+  const [viewingProductId, setViewingProductId] = React.useState<string | null>(
+    null
+  )
   const [editDraft, setEditDraft] = React.useState<ProductFormDraft | null>(
     null
   )
@@ -626,6 +679,7 @@ export function InventoryWorkspace({
     setUnitOptions(Array.from(inventoryUnitOptions))
     setOptionDialog(null)
     setOptionDialogValue("")
+    setViewingProductId(null)
     setEditDraft(null)
     setEditingProductId(null)
     setDeleteProductOpen(false)
@@ -667,6 +721,16 @@ export function InventoryWorkspace({
     editingProductId !== null
       ? (products.find((product) => product.id === editingProductId) ?? null)
       : null
+  const viewingProduct =
+    viewingProductId !== null
+      ? (products.find((product) => product.id === viewingProductId) ?? null)
+      : null
+  const viewingProductMovements = inventory.stockMovements
+    .filter((movement) => movement.productId === viewingProductId)
+    .sort(
+      (first, second) =>
+        new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime()
+    )
 
   function toggleStatus(status: ProductStatus) {
     setSelectedStatuses((current) =>
@@ -679,6 +743,10 @@ export function InventoryWorkspace({
   function openEditModal(product: DemoProduct) {
     setEditingProductId(product.id)
     setEditDraft(getDraftFromProduct(product))
+  }
+
+  function openViewModal(product: DemoProduct) {
+    setViewingProductId(product.id)
   }
 
   function handleAddProductOpenChange(open: boolean) {
@@ -696,6 +764,10 @@ export function InventoryWorkspace({
     setEditingProductId(null)
     setEditDraft(null)
     setDeleteProductOpen(false)
+  }
+
+  function closeViewModal() {
+    setViewingProductId(null)
   }
 
   function confirmDeleteProduct() {
@@ -848,6 +920,167 @@ export function InventoryWorkspace({
                     Cancel
                   </SheetClose>
                   <Button>Save new product</Button>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+
+            <Sheet
+              open={viewingProduct !== null}
+              onOpenChange={(open) => {
+                if (!open) {
+                  closeViewModal()
+                }
+              }}
+            >
+              <SheetContent
+                side={isMobile ? "bottom" : "center"}
+                className={cn(
+                  "rounded-none",
+                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
+                )}
+              >
+                <SheetHeader className="border-b">
+                  <SheetTitle>Product details</SheetTitle>
+                </SheetHeader>
+                <div className="grid gap-4 p-4">
+                  {viewingProduct ? (
+                    <>
+                      <div className="grid gap-4 border border-border p-4 md:grid-cols-2">
+                        <div className="grid gap-1">
+                          <p className="text-[11px] uppercase text-muted-foreground">
+                            Name
+                          </p>
+                          <p className="text-sm font-medium">
+                            {viewingProduct.name}
+                          </p>
+                        </div>
+                        <div className="grid gap-1">
+                          <p className="text-[11px] uppercase text-muted-foreground">
+                            Status
+                          </p>
+                          <div>{getStatusBadge(viewingProduct)}</div>
+                        </div>
+                        <div className="grid gap-1">
+                          <p className="text-[11px] uppercase text-muted-foreground">
+                            Category
+                          </p>
+                          <p className="text-sm">{viewingProduct.category}</p>
+                        </div>
+                        <div className="grid gap-1">
+                          <p className="text-[11px] uppercase text-muted-foreground">
+                            Unit
+                          </p>
+                          <p className="text-sm">{viewingProduct.unit}</p>
+                        </div>
+                        <div className="grid gap-1">
+                          <p className="text-[11px] uppercase text-muted-foreground">
+                            Buying price
+                          </p>
+                          <p className="text-sm">
+                            {formatCurrency(
+                              viewingProduct.buyingPrice,
+                              business.currency
+                            )}
+                          </p>
+                        </div>
+                        <div className="grid gap-1">
+                          <p className="text-[11px] uppercase text-muted-foreground">
+                            Selling price
+                          </p>
+                          <p className="text-sm">
+                            {formatCurrency(
+                              viewingProduct.sellingPrice,
+                              business.currency
+                            )}
+                          </p>
+                        </div>
+                        <div className="grid gap-1">
+                          <p className="text-[11px] uppercase text-muted-foreground">
+                            Stock qty
+                          </p>
+                          <p className="text-sm">
+                            {viewingProduct.currentStock} {viewingProduct.unit}
+                          </p>
+                        </div>
+                        <div className="grid gap-1">
+                          <p className="text-[11px] uppercase text-muted-foreground">
+                            Threshold
+                          </p>
+                          <p className="text-sm">
+                            {viewingProduct.lowStockThreshold}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-medium">
+                            Stock movement history
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {viewingProductMovements.length} records
+                          </p>
+                        </div>
+                        {viewingProductMovements.length > 0 ? (
+                          <div className="grid gap-2">
+                            {viewingProductMovements.map((movement) => (
+                              <div
+                                key={movement.id}
+                                className="grid gap-3 border border-border p-3 md:grid-cols-[1fr_auto_auto]"
+                              >
+                                <div className="grid gap-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-xs font-medium">
+                                      {formatMovementType(movement.type)}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {formatDateTime(movement.createdAt)}
+                                    </p>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {movement.notes}
+                                  </p>
+                                </div>
+                                <div className="grid gap-1 text-xs">
+                                  <p className="text-[11px] uppercase text-muted-foreground">
+                                    Change
+                                  </p>
+                                  <p
+                                    className={cn(
+                                      "font-medium",
+                                      movement.quantityChange > 0 &&
+                                        "text-green-700",
+                                      movement.quantityChange < 0 &&
+                                        "text-red-700"
+                                    )}
+                                  >
+                                    {formatQuantityChange(movement.quantityChange)}
+                                  </p>
+                                </div>
+                                <div className="grid gap-1 text-xs">
+                                  <p className="text-[11px] uppercase text-muted-foreground">
+                                    Stock
+                                  </p>
+                                  <p className="font-medium">
+                                    {movement.stockBefore} to {movement.stockAfter}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="border border-border p-4 text-xs text-muted-foreground">
+                            No stock movement history for this product yet.
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+                <SheetFooter className="justify-end border-t">
+                  <SheetClose render={<Button variant="secondary" />}>
+                    Close
+                  </SheetClose>
                 </SheetFooter>
               </SheetContent>
             </Sheet>
@@ -1168,6 +1401,7 @@ export function InventoryWorkspace({
                     key={product.id}
                     product={product}
                     currency={business.currency}
+                    onView={() => openViewModal(product)}
                     onEdit={() => openEditModal(product)}
                   />
                 ))}
@@ -1202,14 +1436,24 @@ export function InventoryWorkspace({
                   <span>Threshold {product.lowStockThreshold}</span>
                 </div>
                 <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    aria-label={`Edit ${product.name}`}
-                    onClick={() => openEditModal(product)}
-                  >
-                    <PencilLine className="size-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={`View ${product.name}`}
+                      onClick={() => openViewModal(product)}
+                    >
+                      <Eye className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={`Edit ${product.name}`}
+                      onClick={() => openEditModal(product)}
+                    >
+                      <PencilLine className="size-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
