@@ -289,6 +289,7 @@ function SearchableOptionSelect({
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
   const inputRef = React.useRef<HTMLInputElement | null>(null)
+  const rootRef = React.useRef<HTMLDivElement | null>(null)
 
   const normalizedQuery = query.trim().toLowerCase()
   const filteredOptions = options.filter((option) =>
@@ -302,6 +303,33 @@ function SearchableOptionSelect({
     setOpen(false)
     setQuery("")
   }
+
+  React.useEffect(() => {
+    if (!isMobile) {
+      return
+    }
+
+    const parentSheet = rootRef.current?.closest(
+      '[data-slot="sheet-content"]'
+    )
+
+    if (!(parentSheet instanceof HTMLElement)) {
+      return
+    }
+
+    if (open) {
+      parentSheet.style.filter = "blur(3px)"
+      parentSheet.style.transition = "filter 150ms ease"
+    } else {
+      parentSheet.style.filter = ""
+      parentSheet.style.transition = ""
+    }
+
+    return () => {
+      parentSheet.style.filter = ""
+      parentSheet.style.transition = ""
+    }
+  }, [isMobile, open])
 
   function saveOption() {
     const trimmed = query.trim()
@@ -423,7 +451,53 @@ function SearchableOptionSelect({
 
   if (isMobile) {
     return (
-      <Sheet
+      <div ref={rootRef}>
+        <Sheet
+          open={open}
+          onOpenChange={(nextOpen) => {
+            setOpen(nextOpen)
+
+            if (!nextOpen) {
+              setQuery("")
+            }
+          }}
+        >
+          <SheetTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 w-full justify-between"
+              />
+            }
+          >
+            <span className={cn("truncate", !value && "text-muted-foreground")}>
+              {value || placeholder}
+            </span>
+            <ChevronDown className="size-4 text-muted-foreground" />
+          </SheetTrigger>
+          <SheetContent
+            side="bottom"
+            overlayClassName="z-70 bg-black/15 supports-backdrop-filter:backdrop-blur-sm"
+            className="z-80 max-h-[85svh] gap-0 border-t"
+          >
+            <SheetHeader className="border-b">
+              <SheetTitle>{placeholder}</SheetTitle>
+            </SheetHeader>
+            <div className="overflow-y-auto p-4">{optionList}</div>
+            <SheetFooter className="border-t">
+              <SheetClose render={<Button variant="ghost" />}>Done</SheetClose>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={rootRef}>
+      <PopoverPrimitive.Root
+        modal={false}
         open={open}
         onOpenChange={(nextOpen) => {
           setOpen(nextOpen)
@@ -433,7 +507,7 @@ function SearchableOptionSelect({
           }
         }}
       >
-        <SheetTrigger
+        <PopoverPrimitive.Trigger
           render={
             <Button
               type="button"
@@ -446,65 +520,27 @@ function SearchableOptionSelect({
             {value || placeholder}
           </span>
           <ChevronDown className="size-4 text-muted-foreground" />
-        </SheetTrigger>
-        <SheetContent side="bottom" className="max-h-[85svh] gap-0 border-t">
-          <SheetHeader className="border-b">
-            <SheetTitle>{placeholder}</SheetTitle>
-          </SheetHeader>
-          <div className="overflow-y-auto p-4">{optionList}</div>
-          <SheetFooter className="border-t">
-            <SheetClose render={<Button variant="ghost" />}>Done</SheetClose>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    )
-  }
+        </PopoverPrimitive.Trigger>
 
-  return (
-    <PopoverPrimitive.Root
-      modal={false}
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen)
-
-        if (!nextOpen) {
-          setQuery("")
-        }
-      }}
-    >
-      <PopoverPrimitive.Trigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            className="h-8 w-full justify-between"
-          />
-        }
-      >
-        <span className={cn("truncate", !value && "text-muted-foreground")}>
-          {value || placeholder}
-        </span>
-        <ChevronDown className="size-4 text-muted-foreground" />
-      </PopoverPrimitive.Trigger>
-
-      <PopoverPrimitive.Portal>
-        <PopoverPrimitive.Positioner
-          side="bottom"
-          align="start"
-          sideOffset={8}
-          collisionPadding={8}
-          className="z-70"
-        >
-          <PopoverPrimitive.Popup
-            initialFocus={inputRef}
-            finalFocus={false}
-            className="w-(--anchor-width) border border-border bg-popover p-4 shadow-sm outline-none"
+        <PopoverPrimitive.Portal>
+          <PopoverPrimitive.Positioner
+            side="bottom"
+            align="start"
+            sideOffset={8}
+            collisionPadding={8}
+            className="z-70"
           >
-            {optionList}
-          </PopoverPrimitive.Popup>
-        </PopoverPrimitive.Positioner>
-      </PopoverPrimitive.Portal>
-    </PopoverPrimitive.Root>
+            <PopoverPrimitive.Popup
+              initialFocus={inputRef}
+              finalFocus={false}
+              className="w-(--anchor-width) border border-border bg-popover p-4 shadow-sm outline-none"
+            >
+              {optionList}
+            </PopoverPrimitive.Popup>
+          </PopoverPrimitive.Positioner>
+        </PopoverPrimitive.Portal>
+      </PopoverPrimitive.Root>
+    </div>
   )
 }
 
