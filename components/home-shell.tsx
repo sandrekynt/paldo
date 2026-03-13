@@ -23,6 +23,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { useClickOutside } from "@/hooks/use-click-outside"
 import { demoBusinesses } from "@/lib/dummy-data"
 import { cn } from "@/lib/utils"
 
@@ -97,7 +98,9 @@ function MobileBusinessSwitcher({
           {demoBusinesses.map((business) => (
             <SheetClose
               key={business.id}
-              render={<button type="button" className="text-left" />}
+              render={
+                <button type="button" className="cursor-pointer text-left" />
+              }
               onClick={() => onSelect(business.id)}
             >
               <Card
@@ -130,24 +133,18 @@ function DesktopBusinessSwitcher({
   const [open, setOpen] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
 
-  React.useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
+  useClickOutside(containerRef, () => setOpen(false), open)
 
+  React.useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setOpen(false)
       }
     }
 
-    document.addEventListener("mousedown", handlePointerDown)
     document.addEventListener("keydown", handleKeyDown)
 
     return () => {
-      document.removeEventListener("mousedown", handlePointerDown)
       document.removeEventListener("keydown", handleKeyDown)
     }
   }, [])
@@ -172,7 +169,7 @@ function DesktopBusinessSwitcher({
                   setOpen(false)
                 }}
                 className={cn(
-                  "text-left transition-colors hover:bg-muted",
+                  "cursor-pointer text-left transition-colors hover:bg-muted",
                   business.id === selectedBusinessId && "bg-primary/10"
                 )}
               >
@@ -228,7 +225,7 @@ function MobileBottomNav({
               type="button"
               onClick={() => onSelect(item.label)}
               className={cn(
-                "flex min-h-16 flex-col items-center justify-center gap-1 px-2 text-[11px]",
+                "flex min-h-16 cursor-pointer flex-col items-center justify-center gap-1 px-2 text-[11px]",
                 isActive ? "bg-primary text-white" : "text-muted-foreground"
               )}
             >

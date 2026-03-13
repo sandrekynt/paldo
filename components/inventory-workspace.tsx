@@ -1,18 +1,22 @@
 "use client"
 
 import * as React from "react"
-import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
-import {
-  ChevronDown,
-  Eye,
-  PackagePlus,
-  PencilLine,
-  Search,
-  SlidersHorizontal,
-  Trash2,
-} from "lucide-react"
+import { PackagePlus, Search } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
+import { InventoryFilters } from "@/components/inventory/filters"
+import {
+  AddProductSheet,
+  AdjustmentSheet,
+  ArchiveProductSheet,
+  EditProductSheet,
+  OptionDialogSheet,
+  RestockSheet,
+  ViewProductSheet,
+} from "@/components/inventory/modals"
+import {
+  InventoryProductCards,
+  InventoryProductTable,
+} from "@/components/inventory/product-list"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -22,21 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import {
   demoBusinesses,
   getInventoryDemo,
@@ -46,920 +36,40 @@ import {
   type DemoStockMovement,
   type DemoUnitRecord,
 } from "@/lib/dummy-data"
+import { useClickOutside } from "@/hooks/use-click-outside"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { cn } from "@/lib/utils"
+import {
+  createCategoryRecord,
+  createEmptyAddProductDraft,
+  createEmptyAdjustmentDraft,
+  createEmptyRestockDraft,
+  createInventoryStamp,
+  createUnitRecord,
+  getDraftFromProduct,
+  getProductStatus,
+  getSignedAdjustmentQuantity,
+  normalizeOptionValues,
+  type AddProductDraft,
+  type AdjustmentDraft,
+  type FieldErrors,
+  type OptionField,
+  type ProductFormDraft,
+  type ProductStatus,
+  type RestockDraft,
+} from "@/lib/inventory"
 
 type InventoryWorkspaceProps = {
   selectedBusinessId: string
 }
 
-type ProductStatus = "out" | "low" | "healthy" | "archived"
-type OptionField = "category" | "unit"
 type OptionDialogState = {
   action: "edit" | "delete"
   field: OptionField
   value: string
 }
 
-type ProductFormDraft = {
-  name: string
-  sku: string
-  category: string
-  unit: string
-  buyingPrice: string
-  sellingPrice: string
-  lowStockThreshold: string
-}
-
-type AddProductDraft = ProductFormDraft & {
-  openingStock: string
-}
-
-type RestockDraft = {
-  quantityAdded: string
-  totalCost: string
-  notes: string
-}
-
-type AdjustmentDirection = "add" | "subtract"
-
-type AdjustmentDraft = {
-  direction: AdjustmentDirection
-  quantityChange: string
-  notes: string
-}
-
-type FieldErrors = Partial<Record<string, string>>
-
-function createEmptyAddProductDraft(): AddProductDraft {
-  return {
-    name: "",
-    sku: "",
-    category: "",
-    unit: "",
-    buyingPrice: "",
-    sellingPrice: "",
-    openingStock: "",
-    lowStockThreshold: "",
-  }
-}
-
-function createEmptyRestockDraft(): RestockDraft {
-  return {
-    quantityAdded: "",
-    totalCost: "",
-    notes: "",
-  }
-}
-
-function createEmptyAdjustmentDraft(): AdjustmentDraft {
-  return {
-    direction: "add",
-    quantityChange: "",
-    notes: "",
-  }
-}
-
 const PRODUCTS_PER_PAGE = 5
 const defaultStatuses: ProductStatus[] = []
-const statusOptions: { id: ProductStatus; label: string }[] = [
-  { id: "out", label: "Out of stock" },
-  { id: "low", label: "Low stock" },
-  { id: "healthy", label: "Healthy" },
-  { id: "archived", label: "Archived" },
-]
-
-function formatCurrency(value: number, currency: string) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(value)
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en-PH", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value))
-}
-
-function formatMovementType(type: DemoStockMovement["type"]) {
-  if (type === "restock") {
-    return "Restock"
-  }
-
-  if (type === "sale") {
-    return "Sale"
-  }
-
-  if (type === "adjustment") {
-    return "Adjustment"
-  }
-
-  return "Void"
-}
-
-function formatQuantityChange(value: number) {
-  return value > 0 ? `+${value}` : String(value)
-}
-
-function getAdjustmentDirectionMeta(direction: AdjustmentDirection) {
-  return direction === "add"
-    ? {
-        symbol: "+",
-        label: "Add stock",
-        className: "text-green-700",
-      }
-    : {
-        symbol: "-",
-        label: "Subtract stock",
-        className: "text-red-700",
-      }
-}
-
-function getSignedAdjustmentQuantity(draft: AdjustmentDraft) {
-  const quantity = Number(draft.quantityChange)
-
-  if (!Number.isFinite(quantity)) {
-    return Number.NaN
-  }
-
-  return draft.direction === "subtract" ? -quantity : quantity
-}
-
-function normalizeOptionValues(values: string[]) {
-  return values.reduce<string[]>((result, value) => {
-    const trimmed = value.trim()
-
-    if (
-      trimmed.length > 0 &&
-      !result.some(
-        (existing) => existing.toLowerCase() === trimmed.toLowerCase()
-      )
-    ) {
-      result.push(trimmed)
-    }
-
-    return result
-  }, [])
-}
-
-function createCategoryRecord(name: string, businessId: string): DemoCategory {
-  const createdAt = new Date().toISOString()
-  const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
-
-  return {
-    id: `cat-${businessId}-${idSuffix}-${name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")}`,
-    businessId,
-    name: name.trim(),
-    createdAt,
-  }
-}
-
-function createUnitRecord(name: string): DemoUnitRecord {
-  const createdAt = new Date().toISOString()
-  const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
-
-  return {
-    id: `unit-${idSuffix}-${name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")}`,
-    name: name.trim(),
-    createdAt,
-  }
-}
-
-function getDraftFromProduct(product: DemoProduct): ProductFormDraft {
-  return {
-    name: product.name,
-    sku: product.sku,
-    category: product.categoryName,
-    unit: product.unitName,
-    buyingPrice: product.buyingPrice.toFixed(2),
-    sellingPrice: product.sellingPrice.toFixed(2),
-    lowStockThreshold: String(product.lowStockThreshold),
-  }
-}
-
-function getStatusBadge(product: DemoProduct) {
-  const status = getProductStatus(product)
-
-  if (status === "archived") {
-    return (
-      <Badge variant="outline" className="border-dashed text-muted-foreground">
-        Archived
-      </Badge>
-    )
-  }
-
-  if (status === "low") {
-    return (
-      <Badge className="border-transparent bg-amber-100 text-amber-700">
-        Low stock
-      </Badge>
-    )
-  }
-
-  if (status === "out") {
-    return (
-      <Badge className="border-transparent bg-red-100 text-red-700">
-        Out of stock
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge className="border-transparent bg-green-100 text-green-700">
-      Healthy
-    </Badge>
-  )
-}
-
-function getProductStatus(product: DemoProduct): ProductStatus {
-  if (!product.isActive) {
-    return "archived"
-  }
-
-  if (product.currentStock === 0) {
-    return "out"
-  }
-
-  if (product.currentStock <= product.lowStockThreshold) {
-    return "low"
-  }
-
-  return "healthy"
-}
-
-function Field({
-  label,
-  hint,
-  error,
-  className,
-  children,
-}: {
-  label: string
-  hint?: string
-  error?: string
-  className?: string
-  children: React.ReactNode
-}) {
-  return (
-    <label className={cn("grid gap-2 text-xs", className)}>
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-medium text-foreground">{label}</span>
-        {hint ? <span className="text-muted-foreground">{hint}</span> : null}
-      </div>
-      {children}
-      {error ? <p className="text-[11px] text-red-600">{error}</p> : null}
-    </label>
-  )
-}
-
-function SearchableOptionSelect({
-  value,
-  options,
-  placeholder,
-  onChange,
-  onOptionsChange,
-  onRequestEdit,
-  onRequestDelete,
-}: {
-  value: string
-  options: string[]
-  placeholder: string
-  onChange: (value: string) => void
-  onOptionsChange: (values: string[]) => void
-  onRequestEdit: (value: string) => void
-  onRequestDelete: (value: string) => void
-}) {
-  const isMobile = useIsMobile()
-  const [open, setOpen] = React.useState(false)
-  const [query, setQuery] = React.useState("")
-  const inputRef = React.useRef<HTMLInputElement | null>(null)
-  const rootRef = React.useRef<HTMLDivElement | null>(null)
-
-  const normalizedQuery = query.trim().toLowerCase()
-  const filteredOptions = options.filter((option) =>
-    option.toLowerCase().includes(normalizedQuery)
-  )
-  const exactMatch = options.find(
-    (option) => option.toLowerCase() === normalizedQuery
-  )
-
-  function closeMenu() {
-    setOpen(false)
-    setQuery("")
-  }
-
-  React.useEffect(() => {
-    if (!isMobile) {
-      return
-    }
-
-    const parentSheet = rootRef.current?.closest('[data-slot="sheet-content"]')
-
-    if (!(parentSheet instanceof HTMLElement)) {
-      return
-    }
-
-    if (open) {
-      parentSheet.style.filter = "blur(3px)"
-      parentSheet.style.transition = "filter 150ms ease"
-    } else {
-      parentSheet.style.filter = ""
-      parentSheet.style.transition = ""
-    }
-
-    return () => {
-      parentSheet.style.filter = ""
-      parentSheet.style.transition = ""
-    }
-  }, [isMobile, open])
-
-  function saveOption() {
-    const trimmed = query.trim()
-
-    if (!trimmed) {
-      return
-    }
-
-    if (exactMatch) {
-      onChange(exactMatch)
-      closeMenu()
-      return
-    }
-
-    onOptionsChange([...options, trimmed])
-    onChange(trimmed)
-    closeMenu()
-  }
-
-  const visibleOptions =
-    normalizedQuery.length === 0 ? options : filteredOptions
-
-  const optionList = (
-    <div className="grid gap-3">
-      <div className="flex gap-2">
-        <Input
-          ref={inputRef}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault()
-              saveOption()
-            }
-          }}
-          placeholder={`Search or add ${placeholder.toLowerCase()}`}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          className="h-8"
-          disabled={query.trim().length === 0}
-          onClick={saveOption}
-        >
-          Add
-        </Button>
-      </div>
-
-      <div className="grid max-h-[min(15rem,var(--available-height))] gap-2 overflow-y-auto">
-        {visibleOptions.map((option) => (
-          <div
-            key={option}
-            className={cn(
-              "flex items-stretch justify-between gap-2 border border-border",
-              value === option && "border-primary bg-primary/10"
-            )}
-          >
-            <button
-              type="button"
-              className="min-w-0 flex-1 px-2 py-2 text-left text-xs"
-              onClick={() => {
-                onChange(option)
-                closeMenu()
-              }}
-            >
-              <span className="block truncate">{option}</span>
-            </button>
-            <div className="flex items-center gap-1 p-1">
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        closeMenu()
-                        onRequestEdit(option)
-                      }}
-                    />
-                  }
-                >
-                  <PencilLine className="size-3.5" />
-                </TooltipTrigger>
-                <TooltipContent>Edit</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon-sm"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        closeMenu()
-                        onRequestDelete(option)
-                      }}
-                    />
-                  }
-                >
-                  <Trash2 className="size-3.5" />
-                </TooltipTrigger>
-                <TooltipContent>Delete</TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        ))}
-
-        {visibleOptions.length === 0 ? (
-          <div className="border border-border p-3 text-xs text-muted-foreground">
-            No matches yet.
-          </div>
-        ) : null}
-      </div>
-    </div>
-  )
-
-  if (isMobile) {
-    return (
-      <div ref={rootRef}>
-        <Sheet
-          open={open}
-          onOpenChange={(nextOpen) => {
-            setOpen(nextOpen)
-
-            if (!nextOpen) {
-              setQuery("")
-            }
-          }}
-        >
-          <SheetTrigger
-            render={
-              <Button
-                type="button"
-                variant="outline"
-                className="h-8 w-full justify-between"
-              />
-            }
-          >
-            <span className={cn("truncate", !value && "text-muted-foreground")}>
-              {value || placeholder}
-            </span>
-            <ChevronDown className="size-4 text-muted-foreground" />
-          </SheetTrigger>
-          <SheetContent
-            side="bottom"
-            overlayClassName="z-70 bg-black/15 supports-backdrop-filter:backdrop-blur-sm"
-            className="z-80 max-h-[85svh] gap-0 border-t"
-          >
-            <SheetHeader className="border-b">
-              <SheetTitle>{placeholder}</SheetTitle>
-            </SheetHeader>
-            <div className="overflow-y-auto p-4">{optionList}</div>
-            <SheetFooter className="border-t">
-              <SheetClose render={<Button variant="ghost" />}>Done</SheetClose>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-      </div>
-    )
-  }
-
-  return (
-    <div ref={rootRef}>
-      <PopoverPrimitive.Root
-        modal={false}
-        open={open}
-        onOpenChange={(nextOpen) => {
-          setOpen(nextOpen)
-
-          if (!nextOpen) {
-            setQuery("")
-          }
-        }}
-      >
-        <PopoverPrimitive.Trigger
-          render={
-            <Button
-              type="button"
-              variant="outline"
-              className="h-8 w-full justify-between"
-            />
-          }
-        >
-          <span className={cn("truncate", !value && "text-muted-foreground")}>
-            {value || placeholder}
-          </span>
-          <ChevronDown className="size-4 text-muted-foreground" />
-        </PopoverPrimitive.Trigger>
-
-        <PopoverPrimitive.Portal>
-          <PopoverPrimitive.Positioner
-            side="bottom"
-            align="start"
-            sideOffset={8}
-            collisionPadding={8}
-            className="z-70"
-          >
-            <PopoverPrimitive.Popup
-              initialFocus={inputRef}
-              finalFocus={false}
-              className="w-(--anchor-width) border border-border bg-popover p-4 shadow-sm outline-none"
-            >
-              {optionList}
-            </PopoverPrimitive.Popup>
-          </PopoverPrimitive.Positioner>
-        </PopoverPrimitive.Portal>
-      </PopoverPrimitive.Root>
-    </div>
-  )
-}
-
-function ProductForm({
-  mode,
-  draft,
-  categoryOptions,
-  unitOptions,
-  errors,
-  onChange,
-  onCategoryOptionsChange,
-  onUnitOptionsChange,
-  onRequestCategoryEdit,
-  onRequestCategoryDelete,
-  onRequestUnitEdit,
-  onRequestUnitDelete,
-}: {
-  mode: "add" | "edit"
-  draft: ProductFormDraft | AddProductDraft
-  categoryOptions: string[]
-  unitOptions: string[]
-  errors: FieldErrors
-  onChange: (field: string, value: string) => void
-  onCategoryOptionsChange: (values: string[]) => void
-  onUnitOptionsChange: (values: string[]) => void
-  onRequestCategoryEdit: (value: string) => void
-  onRequestCategoryDelete: (value: string) => void
-  onRequestUnitEdit: (value: string) => void
-  onRequestUnitDelete: (value: string) => void
-}) {
-  return (
-    <div className="grid gap-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Name" error={errors.name}>
-          <Input
-            value={draft.name}
-            onChange={(event) => onChange("name", event.target.value)}
-          />
-        </Field>
-        <Field label="SKU" error={errors.sku}>
-          <Input
-            value={draft.sku}
-            onChange={(event) => onChange("sku", event.target.value)}
-          />
-        </Field>
-        <Field label="Category" error={errors.category}>
-          <SearchableOptionSelect
-            value={draft.category}
-            options={categoryOptions}
-            placeholder="Select category"
-            onChange={(value) => onChange("category", value)}
-            onOptionsChange={onCategoryOptionsChange}
-            onRequestEdit={onRequestCategoryEdit}
-            onRequestDelete={onRequestCategoryDelete}
-          />
-        </Field>
-        <Field label="Unit" error={errors.unit}>
-          <SearchableOptionSelect
-            value={draft.unit}
-            options={unitOptions}
-            placeholder="Select unit"
-            onChange={(value) => onChange("unit", value)}
-            onOptionsChange={onUnitOptionsChange}
-            onRequestEdit={onRequestUnitEdit}
-            onRequestDelete={onRequestUnitDelete}
-          />
-        </Field>
-        <Field label="Buying price" error={errors.buyingPrice}>
-          <Input
-            value={draft.buyingPrice}
-            onChange={(event) => onChange("buyingPrice", event.target.value)}
-          />
-        </Field>
-        <Field label="Selling price" error={errors.sellingPrice}>
-          <Input
-            value={draft.sellingPrice}
-            onChange={(event) => onChange("sellingPrice", event.target.value)}
-          />
-        </Field>
-        {mode === "add" ? (
-          <Field label="Opening stock" error={errors.openingStock}>
-            <Input
-              value={"openingStock" in draft ? draft.openingStock : ""}
-              onChange={(event) => onChange("openingStock", event.target.value)}
-            />
-          </Field>
-        ) : null}
-        <Field label="Low stock threshold" error={errors.lowStockThreshold}>
-          <Input
-            value={draft.lowStockThreshold}
-            onChange={(event) =>
-              onChange("lowStockThreshold", event.target.value)
-            }
-          />
-        </Field>
-      </div>
-    </div>
-  )
-}
-
-function RestockForm({
-  draft,
-  errors,
-  onChange,
-}: {
-  draft: RestockDraft
-  errors: FieldErrors
-  onChange: (field: keyof RestockDraft, value: string) => void
-}) {
-  return (
-    <div className="grid gap-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Quantity added" error={errors.quantityAdded}>
-          <Input
-            value={draft.quantityAdded}
-            onChange={(event) => onChange("quantityAdded", event.target.value)}
-          />
-        </Field>
-        <Field label="Total cost" hint="Optional" error={errors.totalCost}>
-          <Input
-            value={draft.totalCost}
-            onChange={(event) => onChange("totalCost", event.target.value)}
-          />
-        </Field>
-        <Field
-          label="Notes"
-          hint="Optional"
-          error={errors.notes}
-          className="md:col-span-2"
-        >
-          <Input
-            value={draft.notes}
-            onChange={(event) => onChange("notes", event.target.value)}
-          />
-        </Field>
-      </div>
-    </div>
-  )
-}
-
-function AdjustmentDirectionSelect({
-  value,
-  onChange,
-}: {
-  value: AdjustmentDirection
-  onChange: (value: AdjustmentDirection) => void
-}) {
-  const [open, setOpen] = React.useState(false)
-  const selectedDirection = getAdjustmentDirectionMeta(value)
-
-  return (
-    <PopoverPrimitive.Root modal={false} open={open} onOpenChange={setOpen}>
-      <PopoverPrimitive.Trigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            className={cn(
-              "h-8 shrink-0 gap-1 px-2",
-              selectedDirection.className
-            )}
-            aria-label={selectedDirection.label}
-          />
-        }
-      >
-        <span className="text-sm font-medium">{selectedDirection.symbol}</span>
-        <ChevronDown className="size-3 text-muted-foreground" />
-      </PopoverPrimitive.Trigger>
-
-      <PopoverPrimitive.Portal>
-        <PopoverPrimitive.Positioner
-          side="bottom"
-          align="start"
-          sideOffset={8}
-          collisionPadding={8}
-          className="z-70"
-        >
-          <PopoverPrimitive.Popup className="w-(--anchor-width) border border-border bg-popover p-1 shadow-sm outline-none">
-            <div className="grid gap-1">
-              {(["add", "subtract"] as const).map((direction) => {
-                const option = getAdjustmentDirectionMeta(direction)
-
-                return (
-                  <Tooltip key={direction}>
-                    <TooltipTrigger
-                      render={
-                        <button
-                          type="button"
-                          className={cn(
-                            "flex w-full items-center justify-center border border-transparent px-0 py-2 text-left text-xs",
-                            direction === value &&
-                              "border-primary bg-primary/10"
-                          )}
-                          onClick={() => {
-                            onChange(direction)
-                            setOpen(false)
-                          }}
-                        />
-                      }
-                    >
-                      <span
-                        className={cn("text-sm font-medium", option.className)}
-                      >
-                        {option.symbol}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>{option.label}</TooltipContent>
-                  </Tooltip>
-                )
-              })}
-            </div>
-          </PopoverPrimitive.Popup>
-        </PopoverPrimitive.Positioner>
-      </PopoverPrimitive.Portal>
-    </PopoverPrimitive.Root>
-  )
-}
-
-function AdjustmentForm({
-  draft,
-  errors,
-  onChange,
-}: {
-  draft: AdjustmentDraft
-  errors: FieldErrors
-  onChange: (field: keyof AdjustmentDraft, value: string) => void
-}) {
-  return (
-    <div className="grid gap-4">
-      <div className="grid gap-4">
-        <Field label="Quantity change" error={errors.quantityChange}>
-          <div className="flex gap-2">
-            <AdjustmentDirectionSelect
-              value={draft.direction}
-              onChange={(value) => onChange("direction", value)}
-            />
-            <Input
-              value={draft.quantityChange}
-              onChange={(event) =>
-                onChange("quantityChange", event.target.value)
-              }
-            />
-          </div>
-        </Field>
-        <Field label="Reason" error={errors.notes}>
-          <Input
-            value={draft.notes}
-            onChange={(event) => onChange("notes", event.target.value)}
-          />
-        </Field>
-      </div>
-    </div>
-  )
-}
-
-function ProductDetailItem({
-  label,
-  value,
-  align = "left",
-}: {
-  label: string
-  value: React.ReactNode
-  align?: "left" | "right"
-}) {
-  return (
-    <div className={cn("grid gap-1", align === "right" && "text-right")}>
-      <p className="text-[11px] text-muted-foreground uppercase">{label}</p>
-      <div>{value}</div>
-    </div>
-  )
-}
-
-function ProductActionSummary({
-  product,
-}: {
-  product: Pick<DemoProduct, "name" | "currentStock" | "unitName">
-}) {
-  return (
-    <div className="grid gap-4 border border-border p-4 md:grid-cols-2">
-      <ProductDetailItem
-        label="Name"
-        value={<p className="text-sm font-medium">{product.name}</p>}
-      />
-      <ProductDetailItem
-        label="Stock qty"
-        value={
-          <p className="text-sm">
-            {product.currentStock} {product.unitName}
-          </p>
-        }
-      />
-    </div>
-  )
-}
-
-function ProductListRow({
-  product,
-  currency,
-  onView,
-  onEdit,
-}: {
-  product: DemoProduct
-  currency: string
-  onView: () => void
-  onEdit: () => void
-}) {
-  return (
-    <tr className="border-t border-border">
-      <td className="px-3 py-3">
-        <p className="text-xs font-medium">{product.name}</p>
-        <p className="text-[11px] text-muted-foreground">{product.sku}</p>
-      </td>
-      <td className="px-3 py-3 text-xs text-muted-foreground">
-        {product.categoryName}
-      </td>
-      <td className="px-3 py-3 text-xs">
-        {formatCurrency(product.buyingPrice, currency)}
-      </td>
-      <td className="px-3 py-3 text-xs">
-        {formatCurrency(product.sellingPrice, currency)}
-      </td>
-      <td className="px-3 py-3 text-xs">
-        <div className="flex items-center gap-2">
-          <span>{product.currentStock}</span>
-          <span className="text-muted-foreground">{product.unitName}</span>
-        </div>
-      </td>
-      <td className="px-3 py-3 text-xs">{product.lowStockThreshold}</td>
-      <td className="px-3 py-3">{getStatusBadge(product)}</td>
-      <td className="px-3 py-3 text-center">
-        <div className="flex items-center justify-center gap-1">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label={`View ${product.name}`}
-                  onClick={onView}
-                />
-              }
-            >
-              <Eye className="size-3.5" />
-            </TooltipTrigger>
-            <TooltipContent>View</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label={`Edit ${product.name}`}
-                  onClick={onEdit}
-                />
-              }
-            >
-              <PencilLine className="size-3.5" />
-            </TooltipTrigger>
-            <TooltipContent>Edit</TooltipContent>
-          </Tooltip>
-        </div>
-      </td>
-    </tr>
-  )
-}
 
 export function InventoryWorkspace({
   selectedBusinessId,
@@ -1030,19 +140,7 @@ export function InventoryWorkspace({
   const filtersRef = React.useRef<HTMLDivElement>(null)
   const viewSheetScrollRef = React.useRef<HTMLDivElement | null>(null)
 
-  React.useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      if (!filtersRef.current?.contains(event.target as Node)) {
-        setFiltersOpen(false)
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown)
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown)
-    }
-  }, [])
+  useClickOutside(filtersRef, () => setFiltersOpen(false), filtersOpen)
 
   React.useEffect(() => {
     setSelectedStatuses(defaultStatuses)
@@ -1211,13 +309,6 @@ export function InventoryWorkspace({
 
   function handleAddProductOpenChange(open: boolean) {
     setAddProductOpen(open)
-
-    if (open) {
-      setAddDraft(createEmptyAddProductDraft())
-      setAddErrors({})
-      return
-    }
-
     setAddDraft(createEmptyAddProductDraft())
     setAddErrors({})
   }
@@ -1416,8 +507,7 @@ export function InventoryWorkspace({
     const categoryRecord = relationResolution.categoryRecord
     const unitRecord = relationResolution.unitRecord
 
-    const createdAt = new Date().toISOString()
-    const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
+    const { createdAt, idSuffix } = createInventoryStamp()
 
     setProducts((current) => [
       {
@@ -1513,8 +603,7 @@ export function InventoryWorkspace({
       return
     }
 
-    const createdAt = new Date().toISOString()
-    const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
+    const { createdAt, idSuffix } = createInventoryStamp()
     const stockBefore = restockProduct.currentStock
     const stockAfter = stockBefore + quantityAdded
     const movementId = `move-${idSuffix}`
@@ -1575,7 +664,10 @@ export function InventoryWorkspace({
       return
     }
 
-    const quantityChange = getSignedAdjustmentQuantity(adjustmentDraft)
+    const quantityChange = getSignedAdjustmentQuantity(
+      adjustmentDraft.direction,
+      adjustmentDraft.quantityChange
+    )
     const notes = adjustmentDraft.notes.trim()
 
     if (
@@ -1593,8 +685,7 @@ export function InventoryWorkspace({
       return
     }
 
-    const createdAt = new Date().toISOString()
-    const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
+    const { createdAt, idSuffix } = createInventoryStamp()
 
     setProducts((current) =>
       current.map((product) =>
@@ -1875,684 +966,176 @@ export function InventoryWorkspace({
                 <span>No stock: {outOfStockCount}</span>
               </div>
             </div>
-            <Sheet
+            <AddProductSheet
+              isMobile={isMobile}
               open={addProductOpen}
+              trigger={
+                <Button>
+                  <PackagePlus className="size-4" />
+                  Add product
+                </Button>
+              }
+              draft={addDraft}
+              categoryOptions={categoryOptions}
+              unitOptions={unitOptions}
+              errors={addErrors}
               onOpenChange={handleAddProductOpenChange}
-            >
-              <SheetTrigger
-                render={
-                  <Button>
-                    <PackagePlus className="size-4" />
-                    Add product
-                  </Button>
-                }
-              />
-              <SheetContent
-                side={isMobile ? "bottom" : "center"}
-                className={cn(
-                  "rounded-none data-[side=center]:max-w-3xl",
-                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
-                )}
-              >
-                <SheetHeader className="border-b">
-                  <SheetTitle>Add product</SheetTitle>
-                </SheetHeader>
-                <div className="p-4">
-                  <ProductForm
-                    mode="add"
-                    draft={addDraft}
-                    categoryOptions={categoryOptions}
-                    unitOptions={unitOptions}
-                    errors={addErrors}
-                    onChange={(field, value) => {
-                      setAddDraft((current) => ({ ...current, [field]: value }))
-                      clearFieldError(field, setAddErrors)
-                    }}
-                    onCategoryOptionsChange={(values) =>
-                      updateFieldOptions("category", values)
-                    }
-                    onUnitOptionsChange={(values) =>
-                      updateFieldOptions("unit", values)
-                    }
-                    onRequestCategoryEdit={(value) =>
-                      openOptionDialog("category", "edit", value)
-                    }
-                    onRequestCategoryDelete={(value) =>
-                      openOptionDialog("category", "delete", value)
-                    }
-                    onRequestUnitEdit={(value) =>
-                      openOptionDialog("unit", "edit", value)
-                    }
-                    onRequestUnitDelete={(value) =>
-                      openOptionDialog("unit", "delete", value)
-                    }
-                  />
-                </div>
-                <SheetFooter className="flex-row justify-end border-t">
-                  <SheetClose render={<Button variant="secondary" />}>
-                    Cancel
-                  </SheetClose>
-                  <Button onClick={saveAddProduct}>Save new product</Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
+              onDraftChange={(field, value) => {
+                setAddDraft((current) => ({ ...current, [field]: value }))
+                clearFieldError(field, setAddErrors)
+              }}
+              onCategoryOptionsChange={(values) =>
+                updateFieldOptions("category", values)
+              }
+              onUnitOptionsChange={(values) =>
+                updateFieldOptions("unit", values)
+              }
+              onRequestCategoryEdit={(value) =>
+                openOptionDialog("category", "edit", value)
+              }
+              onRequestCategoryDelete={(value) =>
+                openOptionDialog("category", "delete", value)
+              }
+              onRequestUnitEdit={(value) =>
+                openOptionDialog("unit", "edit", value)
+              }
+              onRequestUnitDelete={(value) =>
+                openOptionDialog("unit", "delete", value)
+              }
+              onSave={saveAddProduct}
+            />
 
-            <Sheet
+            <ViewProductSheet
+              isMobile={isMobile}
               open={viewingProduct !== null}
+              product={viewingProduct}
+              productKey={viewingProductId ?? "product-details-body"}
+              movements={viewingProductMovements}
+              currency={business.currency}
+              scrollRef={viewSheetScrollRef}
               onOpenChange={(open) => {
                 if (!open) {
                   closeViewModal()
                 }
               }}
-            >
-              <SheetContent
-                side={isMobile ? "bottom" : "center"}
-                className={cn(
-                  "rounded-none",
-                  isMobile && "max-h-[85svh] gap-0 border-t"
-                )}
-              >
-                <SheetHeader className="border-b">
-                  <SheetTitle>Product details</SheetTitle>
-                </SheetHeader>
-                <div
-                  ref={viewSheetScrollRef}
-                  key={viewingProductId ?? "product-details-body"}
-                  className="grid gap-4 overflow-y-auto p-4"
-                >
-                  {viewingProduct ? (
-                    <>
-                      {isMobile ? (
-                        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-6 border border-border p-4">
-                          <div className="grid content-start gap-4">
-                            <ProductDetailItem
-                              label="Name"
-                              value={
-                                <p className="text-sm font-medium">
-                                  {viewingProduct.name}
-                                </p>
-                              }
-                            />
-                            <ProductDetailItem
-                              label="SKU"
-                              value={
-                                <p className="text-sm">{viewingProduct.sku}</p>
-                              }
-                            />
-                            <ProductDetailItem
-                              label="Category"
-                              value={
-                                <p className="text-sm">
-                                  {viewingProduct.categoryName}
-                                </p>
-                              }
-                            />
-                            <ProductDetailItem
-                              label="Buying price"
-                              value={
-                                <p className="text-sm">
-                                  {formatCurrency(
-                                    viewingProduct.buyingPrice,
-                                    business.currency
-                                  )}
-                                </p>
-                              }
-                            />
-                            <ProductDetailItem
-                              label="Stock qty"
-                              value={
-                                <p className="text-sm">
-                                  {viewingProduct.currentStock}{" "}
-                                  {viewingProduct.unitName}
-                                </p>
-                              }
-                            />
-                          </div>
-                          <div className="grid content-start gap-4">
-                            <ProductDetailItem
-                              label="Status"
-                              align="right"
-                              value={getStatusBadge(viewingProduct)}
-                            />
-                            <ProductDetailItem
-                              label="Unit"
-                              align="right"
-                              value={
-                                <p className="text-sm">
-                                  {viewingProduct.unitName}
-                                </p>
-                              }
-                            />
-                            <ProductDetailItem
-                              label="Selling price"
-                              align="right"
-                              value={
-                                <p className="text-sm">
-                                  {formatCurrency(
-                                    viewingProduct.sellingPrice,
-                                    business.currency
-                                  )}
-                                </p>
-                              }
-                            />
-                            <ProductDetailItem
-                              label="Threshold"
-                              align="right"
-                              value={
-                                <p className="text-sm">
-                                  {viewingProduct.lowStockThreshold}
-                                </p>
-                              }
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="grid gap-4 border border-border p-4 md:grid-cols-2">
-                          <ProductDetailItem
-                            label="Name"
-                            value={
-                              <p className="text-sm font-medium">
-                                {viewingProduct.name}
-                              </p>
-                            }
-                          />
-                          <ProductDetailItem
-                            label="Status"
-                            value={getStatusBadge(viewingProduct)}
-                          />
-                          <ProductDetailItem
-                            label="SKU"
-                            value={
-                              <p className="text-sm">{viewingProduct.sku}</p>
-                            }
-                          />
-                          <ProductDetailItem
-                            label="Category"
-                            value={
-                              <p className="text-sm">
-                                {viewingProduct.categoryName}
-                              </p>
-                            }
-                          />
-                          <ProductDetailItem
-                            label="Unit"
-                            value={
-                              <p className="text-sm">
-                                {viewingProduct.unitName}
-                              </p>
-                            }
-                          />
-                          <ProductDetailItem
-                            label="Buying price"
-                            value={
-                              <p className="text-sm">
-                                {formatCurrency(
-                                  viewingProduct.buyingPrice,
-                                  business.currency
-                                )}
-                              </p>
-                            }
-                          />
-                          <ProductDetailItem
-                            label="Selling price"
-                            value={
-                              <p className="text-sm">
-                                {formatCurrency(
-                                  viewingProduct.sellingPrice,
-                                  business.currency
-                                )}
-                              </p>
-                            }
-                          />
-                          <ProductDetailItem
-                            label="Stock qty"
-                            value={
-                              <p className="text-sm">
-                                {viewingProduct.currentStock}{" "}
-                                {viewingProduct.unitName}
-                              </p>
-                            }
-                          />
-                          <ProductDetailItem
-                            label="Threshold"
-                            value={
-                              <p className="text-sm">
-                                {viewingProduct.lowStockThreshold}
-                              </p>
-                            }
-                          />
-                        </div>
-                      )}
+              onRestock={() =>
+                viewingProduct && openRestockModal(viewingProduct.id)
+              }
+              onAdjustment={() =>
+                viewingProduct && openAdjustmentModal(viewingProduct.id)
+              }
+            />
 
-                      <div className="grid gap-2 md:flex md:justify-end">
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            viewingProduct &&
-                            openRestockModal(viewingProduct.id)
-                          }
-                        >
-                          Restock
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            viewingProduct &&
-                            openAdjustmentModal(viewingProduct.id)
-                          }
-                        >
-                          Manual adjustment
-                        </Button>
-                      </div>
-
-                      <div className="grid gap-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-medium">
-                            Stock movement history
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {viewingProductMovements.length} records
-                          </p>
-                        </div>
-                        {viewingProductMovements.length > 0 ? (
-                          <div className="grid gap-2">
-                            {viewingProductMovements.map((movement) =>
-                              isMobile ? (
-                                <div
-                                  key={movement.id}
-                                  className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border border-border p-3"
-                                >
-                                  <div className="grid gap-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <p className="text-xs font-medium">
-                                        {formatMovementType(movement.type)}
-                                      </p>
-                                      <p className="text-[11px] text-muted-foreground">
-                                        {formatDateTime(movement.createdAt)}
-                                      </p>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                      {movement.notes}
-                                    </p>
-                                  </div>
-                                  <div className="grid gap-3 text-right text-xs">
-                                    <div className="grid gap-1">
-                                      <p className="text-[11px] text-muted-foreground uppercase">
-                                        Change
-                                      </p>
-                                      <p
-                                        className={cn(
-                                          "font-medium",
-                                          movement.quantityChange > 0 &&
-                                            "text-green-700",
-                                          movement.quantityChange < 0 &&
-                                            "text-red-700"
-                                        )}
-                                      >
-                                        {formatQuantityChange(
-                                          movement.quantityChange
-                                        )}
-                                      </p>
-                                    </div>
-                                    <div className="grid gap-1">
-                                      <p className="text-[11px] text-muted-foreground uppercase">
-                                        Stock
-                                      </p>
-                                      <p className="font-medium">
-                                        {movement.stockBefore} to{" "}
-                                        {movement.stockAfter}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div
-                                  key={movement.id}
-                                  className="grid gap-3 border border-border p-3 md:grid-cols-[1fr_auto_auto]"
-                                >
-                                  <div className="grid gap-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <p className="text-xs font-medium">
-                                        {formatMovementType(movement.type)}
-                                      </p>
-                                      <p className="text-[11px] text-muted-foreground">
-                                        {formatDateTime(movement.createdAt)}
-                                      </p>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                      {movement.notes}
-                                    </p>
-                                  </div>
-                                  <div className="grid gap-1 text-xs">
-                                    <p className="text-[11px] text-muted-foreground uppercase">
-                                      Change
-                                    </p>
-                                    <p
-                                      className={cn(
-                                        "font-medium",
-                                        movement.quantityChange > 0 &&
-                                          "text-green-700",
-                                        movement.quantityChange < 0 &&
-                                          "text-red-700"
-                                      )}
-                                    >
-                                      {formatQuantityChange(
-                                        movement.quantityChange
-                                      )}
-                                    </p>
-                                  </div>
-                                  <div className="grid gap-1 text-xs">
-                                    <p className="text-[11px] text-muted-foreground uppercase">
-                                      Stock
-                                    </p>
-                                    <p className="font-medium">
-                                      {movement.stockBefore} to{" "}
-                                      {movement.stockAfter}
-                                    </p>
-                                  </div>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        ) : (
-                          <div className="border border-border p-4 text-xs text-muted-foreground">
-                            No stock movement history for this product yet.
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-                <SheetFooter className="justify-end border-t">
-                  <SheetClose render={<Button variant="secondary" />}>
-                    Close
-                  </SheetClose>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-
-            <Sheet
+            <RestockSheet
+              isMobile={isMobile}
               open={restockProduct !== null}
+              product={restockProduct}
+              draft={restockDraft}
+              errors={restockErrors}
               onOpenChange={(open) => {
                 if (!open) {
                   closeRestockModal()
                 }
               }}
-            >
-              <SheetContent
-                side={isMobile ? "bottom" : "center"}
-                className={cn(
-                  "rounded-none data-[side=center]:max-w-3xl",
-                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
-                )}
-              >
-                <SheetHeader className="border-b">
-                  <SheetTitle>Restock</SheetTitle>
-                </SheetHeader>
-                <div className="grid gap-4 p-4">
-                  {restockProduct ? (
-                    <>
-                      <ProductActionSummary product={restockProduct} />
-                      <RestockForm
-                        draft={restockDraft}
-                        errors={restockErrors}
-                        onChange={(field, value) => {
-                          setRestockDraft((current) => ({
-                            ...current,
-                            [field]: value,
-                          }))
-                          clearFieldError(field, setRestockErrors)
-                        }}
-                      />
-                    </>
-                  ) : null}
-                </div>
-                <SheetFooter className="flex-row justify-end border-t">
-                  <SheetClose render={<Button variant="secondary" />}>
-                    Cancel
-                  </SheetClose>
-                  <Button onClick={applyRestock}>Save restock</Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
+              onDraftChange={(field, value) => {
+                setRestockDraft((current) => ({
+                  ...current,
+                  [field]: value,
+                }))
+                clearFieldError(field, setRestockErrors)
+              }}
+              onSave={applyRestock}
+            />
 
-            <Sheet
+            <AdjustmentSheet
+              isMobile={isMobile}
               open={adjustmentProduct !== null}
+              product={adjustmentProduct}
+              draft={adjustmentDraft}
+              errors={adjustmentErrors}
               onOpenChange={(open) => {
                 if (!open) {
                   closeAdjustmentModal()
                 }
               }}
-            >
-              <SheetContent
-                side={isMobile ? "bottom" : "center"}
-                className={cn(
-                  "rounded-none",
-                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
-                )}
-              >
-                <SheetHeader className="border-b">
-                  <SheetTitle>Manual adjustment</SheetTitle>
-                </SheetHeader>
-                <div className="grid gap-4 p-4">
-                  {adjustmentProduct ? (
-                    <>
-                      <ProductActionSummary product={adjustmentProduct} />
-                      <AdjustmentForm
-                        draft={adjustmentDraft}
-                        errors={adjustmentErrors}
-                        onChange={(field, value) => {
-                          setAdjustmentDraft((current) => ({
-                            ...current,
-                            [field]: value,
-                          }))
-                          clearFieldError(field, setAdjustmentErrors)
-                        }}
-                      />
-                    </>
-                  ) : null}
-                </div>
-                <SheetFooter className="flex-row justify-end border-t">
-                  <SheetClose render={<Button variant="secondary" />}>
-                    Cancel
-                  </SheetClose>
-                  <Button onClick={applyAdjustment}>Save adjustment</Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
+              onDraftChange={(field, value) => {
+                setAdjustmentDraft((current) => ({
+                  ...current,
+                  [field]: value,
+                }))
+                clearFieldError(field, setAdjustmentErrors)
+              }}
+              onSave={applyAdjustment}
+            />
 
-            <Sheet
+            <EditProductSheet
+              isMobile={isMobile}
               open={editingProduct !== null}
+              product={editingProduct}
+              draft={editDraft}
+              categoryOptions={categoryOptions}
+              unitOptions={unitOptions}
+              errors={editErrors}
+              isArchived={isEditingArchivedProduct}
               onOpenChange={(open) => {
                 if (!open) {
                   closeEditModal()
                 }
               }}
-            >
-              <SheetContent
-                side={isMobile ? "bottom" : "center"}
-                className={cn(
-                  "rounded-none",
-                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
-                )}
-              >
-                <SheetHeader className="border-b">
-                  <SheetTitle>Edit product</SheetTitle>
-                </SheetHeader>
-                <div className="p-4">
-                  {editingProduct && editDraft ? (
-                    <ProductForm
-                      mode="edit"
-                      draft={editDraft}
-                      categoryOptions={categoryOptions}
-                      unitOptions={unitOptions}
-                      errors={editErrors}
-                      onChange={(field, value) => {
-                        setEditDraft((current) =>
-                          current ? { ...current, [field]: value } : current
-                        )
-                        clearFieldError(field, setEditErrors)
-                      }}
-                      onCategoryOptionsChange={(values) =>
-                        updateFieldOptions("category", values)
-                      }
-                      onUnitOptionsChange={(values) =>
-                        updateFieldOptions("unit", values)
-                      }
-                      onRequestCategoryEdit={(value) =>
-                        openOptionDialog("category", "edit", value)
-                      }
-                      onRequestCategoryDelete={(value) =>
-                        openOptionDialog("category", "delete", value)
-                      }
-                      onRequestUnitEdit={(value) =>
-                        openOptionDialog("unit", "edit", value)
-                      }
-                      onRequestUnitDelete={(value) =>
-                        openOptionDialog("unit", "delete", value)
-                      }
-                    />
-                  ) : null}
-                </div>
-                <SheetFooter className="flex-row justify-between border-t">
-                  <Button
-                    variant={
-                      isEditingArchivedProduct ? "outline" : "destructive"
-                    }
-                    onClick={() => setArchiveProductOpen(true)}
-                  >
-                    {isEditingArchivedProduct ? "Restore" : "Archive"}
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <SheetClose render={<Button variant="secondary" />}>
-                      Cancel
-                    </SheetClose>
-                    <Button onClick={saveEditProduct}>Save changes</Button>
-                  </div>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
+              onDraftChange={(field, value) => {
+                setEditDraft((current) =>
+                  current ? { ...current, [field]: value } : current
+                )
+                clearFieldError(field, setEditErrors)
+              }}
+              onCategoryOptionsChange={(values) =>
+                updateFieldOptions("category", values)
+              }
+              onUnitOptionsChange={(values) =>
+                updateFieldOptions("unit", values)
+              }
+              onRequestCategoryEdit={(value) =>
+                openOptionDialog("category", "edit", value)
+              }
+              onRequestCategoryDelete={(value) =>
+                openOptionDialog("category", "delete", value)
+              }
+              onRequestUnitEdit={(value) =>
+                openOptionDialog("unit", "edit", value)
+              }
+              onRequestUnitDelete={(value) =>
+                openOptionDialog("unit", "delete", value)
+              }
+              onArchiveClick={() => setArchiveProductOpen(true)}
+              onSave={saveEditProduct}
+            />
 
-            <Sheet
+            <ArchiveProductSheet
+              isMobile={isMobile}
               open={archiveProductOpen}
+              productName={editingProduct?.name ?? "this product"}
+              isArchived={isEditingArchivedProduct}
               onOpenChange={setArchiveProductOpen}
-            >
-              <SheetContent
-                side={isMobile ? "bottom" : "center"}
-                className={cn(
-                  "rounded-none",
-                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
-                )}
-              >
-                <SheetHeader className="border-b">
-                  <SheetTitle>
-                    {isEditingArchivedProduct
-                      ? "Restore product"
-                      : "Archive product"}
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="grid gap-4 p-4">
-                  <p className="text-xs text-muted-foreground">
-                    {isEditingArchivedProduct ? "Restore" : "Archive"}{" "}
-                    <span className="font-medium text-foreground">
-                      {editingProduct?.name ?? "this product"}
-                    </span>
-                    ?
-                  </p>
-                </div>
-                <SheetFooter className="flex-row justify-end border-t">
-                  <div className="flex items-center gap-2">
-                    <SheetClose render={<Button variant="secondary" />}>
-                      Cancel
-                    </SheetClose>
-                    <Button
-                      variant={
-                        isEditingArchivedProduct ? "default" : "destructive"
-                      }
-                      onClick={confirmArchiveProduct}
-                    >
-                      {isEditingArchivedProduct ? "Restore" : "Archive"}
-                    </Button>
-                  </div>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
+              onConfirm={confirmArchiveProduct}
+            />
 
-            <Sheet
+            <OptionDialogSheet
+              isMobile={isMobile}
               open={optionDialog !== null}
+              dialog={optionDialog}
+              value={optionDialogValue}
+              error={optionDialogError}
               onOpenChange={(open) => {
                 if (!open) {
                   closeOptionDialog()
                 }
               }}
-            >
-              <SheetContent
-                side={isMobile ? "bottom" : "center"}
-                className={cn(
-                  "rounded-none",
-                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
-                )}
-              >
-                <SheetHeader className="border-b">
-                  <SheetTitle>
-                    {optionDialog?.action === "edit" ? "Edit" : "Delete"}{" "}
-                    {optionDialog?.field}
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="grid gap-4 p-4">
-                  {optionDialog?.action === "edit" ? (
-                    <Field
-                      label={
-                        optionDialog.field === "category" ? "Category" : "Unit"
-                      }
-                    >
-                      <Input
-                        value={optionDialogValue}
-                        onChange={(event) => {
-                          setOptionDialogValue(event.target.value)
-                          setOptionDialogError("")
-                        }}
-                      />
-                    </Field>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Delete{" "}
-                      <span className="font-medium text-foreground">
-                        {optionDialog?.value ??
-                          `this ${optionDialog?.field ?? "option"}`}
-                      </span>
-                      ?
-                    </p>
-                  )}
-                  {optionDialogError ? (
-                    <p className="text-[11px] text-red-600">
-                      {optionDialogError}
-                    </p>
-                  ) : null}
-                </div>
-                <SheetFooter
-                  className={cn(
-                    "flex-row border-t",
-                    optionDialog?.action === "edit"
-                      ? "justify-end"
-                      : "justify-end"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <SheetClose render={<Button variant="secondary" />}>
-                      Cancel
-                    </SheetClose>
-                    {optionDialog?.action === "edit" ? (
-                      <Button onClick={applyOptionDialog}>Save</Button>
-                    ) : optionDialog?.action === "delete" ? (
-                      <Button variant="destructive" onClick={applyOptionDialog}>
-                        Delete
-                      </Button>
-                    ) : null}
-                  </div>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
+              onValueChange={(value) => {
+                setOptionDialogValue(value)
+                setOptionDialogError("")
+              }}
+              onSave={applyOptionDialog}
+            />
           </div>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -2566,247 +1149,34 @@ export function InventoryWorkspace({
                 className="pl-8"
               />
             </div>
-            <div className="justify-self-end">
-              <div ref={filtersRef} className="relative hidden md:block">
-                <Button
-                  size="default"
-                  variant="outline"
-                  className={cn("h-8", filtersOpen && "border-primary")}
-                  onClick={() => setFiltersOpen((current) => !current)}
-                >
-                  <SlidersHorizontal className="size-4" />
-                  Filters
-                  {totalSelectedFilters > 0 ? ` (${totalSelectedFilters})` : ""}
-                </Button>
-                {filtersOpen ? (
-                  <div className="absolute top-full right-0 z-20 mt-2 w-56 border border-border bg-popover p-4 shadow-sm">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium">Filters</p>
-                      <button
-                        type="button"
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                        onClick={clearFilters}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    <div className="grid gap-4 text-xs">
-                      <div className="grid gap-3">
-                        <p className="font-medium">Categories</p>
-                        {availableCategories.map((category) => {
-                          const checked = selectedCategories.includes(category)
-
-                          return (
-                            <label
-                              key={category}
-                              className="flex items-center gap-3 text-foreground"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleCategoryFilter(category)}
-                                className="size-4 rounded-none border border-input accent-(--color-primary)"
-                              />
-                              <span>{category}</span>
-                            </label>
-                          )
-                        })}
-                      </div>
-                      <div className="grid gap-3">
-                        <p className="font-medium">Statuses</p>
-                        {statusOptions.map((item) => {
-                          const checked = selectedStatuses.includes(item.id)
-
-                          return (
-                            <label
-                              key={item.id}
-                              className="flex items-center gap-3 text-foreground"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleStatus(item.id)}
-                                className="size-4 rounded-none border border-input accent-(--color-primary)"
-                              />
-                              <span>{item.label}</span>
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              <Sheet
-                open={mobileFiltersOpen}
-                onOpenChange={setMobileFiltersOpen}
-              >
-                <SheetTrigger
-                  render={
-                    <Button
-                      size="default"
-                      variant="outline"
-                      className="h-8 md:hidden"
-                    >
-                      <SlidersHorizontal className="size-4" />
-                      Filters
-                      {totalSelectedFilters > 0
-                        ? ` (${totalSelectedFilters})`
-                        : ""}
-                    </Button>
-                  }
-                />
-                <SheetContent
-                  side="bottom"
-                  className="max-h-[85svh] gap-0 border-t md:hidden"
-                >
-                  <SheetHeader className="border-b">
-                    <SheetTitle>Filters</SheetTitle>
-                  </SheetHeader>
-                  <div className="grid gap-4 overflow-y-auto p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium">Filters</p>
-                      <button
-                        type="button"
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                        onClick={clearFilters}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    <div className="grid gap-4 text-xs">
-                      <div className="grid gap-3">
-                        <p className="font-medium">Categories</p>
-                        {availableCategories.map((category) => {
-                          const checked = selectedCategories.includes(category)
-
-                          return (
-                            <label
-                              key={category}
-                              className="flex items-center gap-3 text-foreground"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleCategoryFilter(category)}
-                                className="size-4 rounded-none border border-input accent-(--color-primary)"
-                              />
-                              <span>{category}</span>
-                            </label>
-                          )
-                        })}
-                      </div>
-                      <div className="grid gap-3">
-                        <p className="font-medium">Statuses</p>
-                        {statusOptions.map((item) => {
-                          const checked = selectedStatuses.includes(item.id)
-
-                          return (
-                            <label
-                              key={item.id}
-                              className="flex items-center gap-3 text-foreground"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleStatus(item.id)}
-                                className="size-4 rounded-none border border-input accent-(--color-primary)"
-                              />
-                              <span>{item.label}</span>
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                  <SheetFooter className="border-t">
-                    <SheetClose render={<Button variant="ghost" />}>
-                      Done
-                    </SheetClose>
-                  </SheetFooter>
-                </SheetContent>
-              </Sheet>
-            </div>
+            <InventoryFilters
+              filtersRef={filtersRef}
+              filtersOpen={filtersOpen}
+              mobileFiltersOpen={mobileFiltersOpen}
+              totalSelectedFilters={totalSelectedFilters}
+              availableCategories={availableCategories}
+              selectedCategories={selectedCategories}
+              selectedStatuses={selectedStatuses}
+              onFiltersOpenChange={setFiltersOpen}
+              onMobileFiltersOpenChange={setMobileFiltersOpen}
+              onToggleCategoryFilter={toggleCategoryFilter}
+              onToggleStatus={toggleStatus}
+              onClearFilters={clearFilters}
+            />
           </div>
 
-          <div className="hidden overflow-x-auto lg:block">
-            <table className="min-w-full border-collapse">
-              <thead>
-                <tr className="bg-secondary text-left text-[11px] text-muted-foreground uppercase">
-                  <th className="px-3 py-3 align-middle">Name</th>
-                  <th className="px-3 py-3 align-middle">Category</th>
-                  <th className="px-3 py-3 align-middle">Buying</th>
-                  <th className="px-3 py-3 align-middle">Selling</th>
-                  <th className="px-3 py-3 align-middle">Stock qty</th>
-                  <th className="px-3 py-3 align-middle">Threshold</th>
-                  <th className="px-3 py-3 align-middle">Status</th>
-                  <th className="px-3 py-3 text-center align-middle">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedProducts.map((product) => (
-                  <ProductListRow
-                    key={product.id}
-                    product={product}
-                    currency={business.currency}
-                    onView={() => openViewModal(product)}
-                    onEdit={() => openEditModal(product)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="grid gap-3 lg:hidden">
-            {paginatedProducts.map((product) => (
-              <div
-                key={product.id}
-                className="grid gap-3 border border-border p-3 text-left"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium">{product.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {product.categoryName} · {product.unitName}
-                    </p>
-                  </div>
-                  {getStatusBadge(product)}
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <span>
-                    Buy {formatCurrency(product.buyingPrice, business.currency)}
-                  </span>
-                  <span>
-                    Sell{" "}
-                    {formatCurrency(product.sellingPrice, business.currency)}
-                  </span>
-                  <span>Stock {product.currentStock}</span>
-                  <span>Threshold {product.lowStockThreshold}</span>
-                </div>
-                <div className="flex justify-end">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label={`View ${product.name}`}
-                      onClick={() => openViewModal(product)}
-                    >
-                      <Eye className="size-3.5" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label={`Edit ${product.name}`}
-                      onClick={() => openEditModal(product)}
-                    >
-                      <PencilLine className="size-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <InventoryProductTable
+            products={paginatedProducts}
+            currency={business.currency}
+            onView={openViewModal}
+            onEdit={openEditModal}
+          />
+          <InventoryProductCards
+            products={paginatedProducts}
+            currency={business.currency}
+            onView={openViewModal}
+            onEdit={openEditModal}
+          />
 
           {filteredProducts.length === 0 ? (
             <div className="border border-border bg-muted/20 p-6 text-center text-xs text-muted-foreground">
