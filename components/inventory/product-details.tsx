@@ -205,7 +205,7 @@ export function InventoryProductDetailsContent({
             render={
               <Button
                 variant="outline"
-                size="icon-sm"
+                size="icon"
                 aria-label={`More actions for ${product.name}`}
               />
             }
@@ -220,10 +220,10 @@ export function InventoryProductDetailsContent({
               collisionPadding={8}
               className="z-70"
             >
-              <PopoverPrimitive.Popup className="min-w-44 border border-border bg-popover p-1 shadow-sm outline-none">
+              <PopoverPrimitive.Popup className="w-max border border-border bg-popover p-1 shadow-sm outline-none">
                 <button
                   type="button"
-                  className="flex w-full cursor-pointer items-center justify-start px-2 py-2 text-left text-xs hover:bg-muted"
+                  className="inline-flex h-8 cursor-pointer items-center justify-start px-2.5 text-left text-xs whitespace-nowrap hover:bg-muted"
                   onClick={() => {
                     setActionsOpen(false)
                     onAdjustment()

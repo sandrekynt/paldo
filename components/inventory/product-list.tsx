@@ -166,19 +166,21 @@ export function InventoryProductCards({
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
-                size="icon-sm"
+                size="sm"
                 aria-label={`View ${product.name}`}
                 onClick={() => onView(product)}
               >
                 <Eye className="size-3.5" />
+                View
               </Button>
               <Button
                 variant="outline"
-                size="icon-sm"
+                size="sm"
                 aria-label={`Edit ${product.name}`}
                 onClick={() => onEdit(product)}
               >
                 <PencilLine className="size-3.5" />
+                Edit
               </Button>
             </div>
           </div>
