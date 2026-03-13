@@ -79,7 +79,10 @@ type RestockDraft = {
   notes: string
 }
 
+type AdjustmentDirection = "add" | "subtract"
+
 type AdjustmentDraft = {
+  direction: AdjustmentDirection
   quantityChange: string
   notes: string
 }
@@ -106,6 +109,7 @@ function createEmptyRestockDraft(): RestockDraft {
 
 function createEmptyAdjustmentDraft(): AdjustmentDraft {
   return {
+    direction: "add",
     quantityChange: "",
     notes: "",
   }
@@ -155,6 +159,30 @@ function formatMovementType(type: DemoStockMovement["type"]) {
 
 function formatQuantityChange(value: number) {
   return value > 0 ? `+${value}` : String(value)
+}
+
+function getAdjustmentDirectionMeta(direction: AdjustmentDirection) {
+  return direction === "add"
+    ? {
+        symbol: "+",
+        label: "Add stock",
+        className: "text-green-700",
+      }
+    : {
+        symbol: "-",
+        label: "Subtract stock",
+        className: "text-red-700",
+      }
+}
+
+function getSignedAdjustmentQuantity(draft: AdjustmentDraft) {
+  const quantity = Number(draft.quantityChange)
+
+  if (!Number.isFinite(quantity)) {
+    return Number.NaN
+  }
+
+  return draft.direction === "subtract" ? -quantity : quantity
 }
 
 function getDraftFromProduct(product: DemoProduct): ProductFormDraft {
@@ -602,6 +630,87 @@ function RestockForm({
   )
 }
 
+function AdjustmentDirectionSelect({
+  value,
+  onChange,
+}: {
+  value: AdjustmentDirection
+  onChange: (value: AdjustmentDirection) => void
+}) {
+  const [open, setOpen] = React.useState(false)
+  const selectedDirection = getAdjustmentDirectionMeta(value)
+
+  return (
+    <PopoverPrimitive.Root
+      modal={false}
+      open={open}
+      onOpenChange={setOpen}
+    >
+      <PopoverPrimitive.Trigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "h-8 shrink-0 gap-1 px-2",
+              selectedDirection.className
+            )}
+            aria-label={selectedDirection.label}
+          />
+        }
+      >
+        <span className="text-sm font-medium">{selectedDirection.symbol}</span>
+        <ChevronDown className="size-3 text-muted-foreground" />
+      </PopoverPrimitive.Trigger>
+
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Positioner
+          side="bottom"
+          align="start"
+          sideOffset={8}
+          collisionPadding={8}
+          className="z-70"
+        >
+          <PopoverPrimitive.Popup className="w-(--anchor-width) border border-border bg-popover p-1 shadow-sm outline-none">
+            <div className="grid gap-1">
+              {(["add", "subtract"] as const).map((direction) => {
+                const option = getAdjustmentDirectionMeta(direction)
+
+                return (
+                  <Tooltip key={direction}>
+                    <TooltipTrigger
+                      render={
+                        <button
+                          type="button"
+                          className={cn(
+                            "flex w-full items-center justify-center border border-transparent px-0 py-2 text-left text-xs",
+                            direction === value && "border-primary bg-primary/10"
+                          )}
+                          onClick={() => {
+                            onChange(direction)
+                            setOpen(false)
+                          }}
+                        />
+                      }
+                    >
+                      <span
+                        className={cn("text-sm font-medium", option.className)}
+                      >
+                        {option.symbol}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{option.label}</TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </div>
+          </PopoverPrimitive.Popup>
+        </PopoverPrimitive.Positioner>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
+  )
+}
+
 function AdjustmentForm({
   draft,
   onChange,
@@ -612,11 +721,19 @@ function AdjustmentForm({
   return (
     <div className="grid gap-4">
       <div className="grid gap-4">
-        <Field label="Quantity change" hint="Use - for deduction">
-          <Input
-            value={draft.quantityChange}
-            onChange={(event) => onChange("quantityChange", event.target.value)}
-          />
+        <Field label="Quantity change">
+          <div className="flex gap-2">
+            <AdjustmentDirectionSelect
+              value={draft.direction}
+              onChange={(value) => onChange("direction", value)}
+            />
+            <Input
+              value={draft.quantityChange}
+              onChange={(event) =>
+                onChange("quantityChange", event.target.value)
+              }
+            />
+          </div>
         </Field>
         <Field label="Reason" hint="Required">
           <Input
@@ -1030,7 +1147,7 @@ export function InventoryWorkspace({
       return
     }
 
-    const quantityChange = Number(adjustmentDraft.quantityChange)
+    const quantityChange = getSignedAdjustmentQuantity(adjustmentDraft)
     const notes = adjustmentDraft.notes.trim()
 
     if (
@@ -1638,11 +1755,14 @@ export function InventoryWorkspace({
                   </SheetClose>
                   <Button
                     disabled={
-                      Number(adjustmentDraft.quantityChange) === 0 ||
+                      !Number.isFinite(
+                        getSignedAdjustmentQuantity(adjustmentDraft)
+                      ) ||
+                      getSignedAdjustmentQuantity(adjustmentDraft) === 0 ||
                       adjustmentDraft.notes.trim().length === 0 ||
                       (adjustmentProduct
                         ? adjustmentProduct.currentStock +
-                            Number(adjustmentDraft.quantityChange) <
+                            getSignedAdjustmentQuantity(adjustmentDraft) <
                           0
                         : false)
                     }

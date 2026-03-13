@@ -114,6 +114,7 @@ export type DemoInventoryDrafts = {
     notes: string
   }
   adjustment: {
+    direction: "add" | "subtract"
     quantityChange: string
     notes: string
   }
@@ -489,7 +490,8 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         notes: "Prep for weekend foot traffic and school dismissal rush.",
       },
       adjustment: {
-        quantityChange: "-2",
+        direction: "subtract",
+        quantityChange: "2",
         notes: "Two bottles leaked inside the ice chest. Adjustment note required.",
       },
     },
@@ -816,7 +818,8 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         notes: "Prepare extra refill capacity before Saturday village rounds.",
       },
       adjustment: {
-        quantityChange: "-1",
+        direction: "subtract",
+        quantityChange: "1",
         notes: "Container returned with cracked neck. Note is required before submit.",
       },
     },
@@ -1157,7 +1160,8 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         notes: "Reserve incoming kilos for two contractor accounts on Friday pickup.",
       },
       adjustment: {
-        quantityChange: "-1",
+        direction: "subtract",
+        quantityChange: "1",
         notes: "One kilo reweighed and removed after moisture exposure. Reason stays mandatory.",
       },
     },
