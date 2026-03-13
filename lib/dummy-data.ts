@@ -11,7 +11,18 @@ export const inventoryUnitOptions = [
   "other",
 ] as const
 
-export type InventoryUnit = (typeof inventoryUnitOptions)[number]
+export type DemoCategory = {
+  id: string
+  businessId: string
+  name: string
+  createdAt: string
+}
+
+export type DemoUnitRecord = {
+  id: string
+  name: string
+  createdAt: string
+}
 
 export type DemoBusiness = {
   id: string
@@ -30,8 +41,10 @@ export type DemoProduct = {
   businessId: string
   name: string
   sku: string
-  category: string
-  unit: InventoryUnit
+  categoryId: string
+  categoryName: string
+  unitId: string
+  unitName: string
   buyingPrice: number
   sellingPrice: number
   currentStock: number
@@ -105,7 +118,7 @@ export type DemoInventoryDrafts = {
     name: string
     sku: string
     category: string
-    unit: InventoryUnit
+    unit: string
     buyingPrice: string
     sellingPrice: string
     openingStock: string
@@ -126,7 +139,8 @@ export type DemoInventoryDrafts = {
 export type DemoInventoryBusinessData = {
   headline: string
   focusProductId: string
-  suggestedCategories: string[]
+  categories: DemoCategory[]
+  units: DemoUnitRecord[]
   products: DemoProduct[]
   stockMovements: DemoStockMovement[]
   restocks: DemoRestock[]
@@ -170,19 +184,55 @@ export const demoBusinesses: DemoBusiness[] = [
   },
 ]
 
+export const demoInventoryUnits: DemoUnitRecord[] = inventoryUnitOptions.map(
+  (unit, index) => ({
+    id: `unit-${unit}`,
+    name: unit,
+    createdAt: `2026-01-${String(index + 1).padStart(2, "0")}T08:00:00+08:00`,
+  })
+)
+
 const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
   "paldo-1": {
     headline: "Fast-moving grocery items with frequent low-stock checks and small-batch restocks.",
     focusProductId: "mm-prod-2",
-    suggestedCategories: ["Grocery", "Beverages", "Household", "Frozen"],
+    categories: [
+      {
+        id: "mm-cat-grocery",
+        businessId: "paldo-1",
+        name: "Grocery",
+        createdAt: "2026-02-01T08:00:00+08:00",
+      },
+      {
+        id: "mm-cat-beverages",
+        businessId: "paldo-1",
+        name: "Beverages",
+        createdAt: "2026-02-01T08:05:00+08:00",
+      },
+      {
+        id: "mm-cat-household",
+        businessId: "paldo-1",
+        name: "Household",
+        createdAt: "2026-02-01T08:10:00+08:00",
+      },
+      {
+        id: "mm-cat-frozen",
+        businessId: "paldo-1",
+        name: "Frozen",
+        createdAt: "2026-02-01T08:15:00+08:00",
+      },
+    ],
+    units: demoInventoryUnits,
     products: [
       {
         id: "mm-prod-1",
         businessId: "paldo-1",
         name: "Lucky Me Pancit Canton",
         sku: "KMM-GRO-001",
-        category: "Grocery",
-        unit: "pack",
+        categoryId: "mm-cat-grocery",
+        categoryName: "Grocery",
+        unitId: "unit-pack",
+        unitName: "pack",
         buyingPrice: 12.5,
         sellingPrice: 18,
         currentStock: 42,
@@ -196,8 +246,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-1",
         name: "Summit Drinking Water 500ml",
         sku: "KMM-BEV-002",
-        category: "Beverages",
-        unit: "bottle",
+        categoryId: "mm-cat-beverages",
+        categoryName: "Beverages",
+        unitId: "unit-bottle",
+        unitName: "bottle",
         buyingPrice: 8,
         sellingPrice: 12,
         currentStock: 7,
@@ -211,8 +263,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-1",
         name: "Surf Powder Sachet",
         sku: "KMM-HOU-003",
-        category: "Household",
-        unit: "piece",
+        categoryId: "mm-cat-household",
+        categoryName: "Household",
+        unitId: "unit-piece",
+        unitName: "piece",
         buyingPrice: 6.2,
         sellingPrice: 9,
         currentStock: 18,
@@ -226,8 +280,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-1",
         name: "555 Sardines Hot",
         sku: "KMM-GRO-004",
-        category: "Grocery",
-        unit: "piece",
+        categoryId: "mm-cat-grocery",
+        categoryName: "Grocery",
+        unitId: "unit-piece",
+        unitName: "piece",
         buyingPrice: 21,
         sellingPrice: 28,
         currentStock: 0,
@@ -241,8 +297,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-1",
         name: "Well-Milled Rice",
         sku: "KMM-GRO-005",
-        category: "Grocery",
-        unit: "kilo",
+        categoryId: "mm-cat-grocery",
+        categoryName: "Grocery",
+        unitId: "unit-kilo",
+        unitName: "kilo",
         buyingPrice: 43,
         sellingPrice: 52,
         currentStock: 86,
@@ -256,8 +314,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-1",
         name: "3-in-1 Coffee Twin Pack",
         sku: "KMM-GRO-006",
-        category: "Grocery",
-        unit: "box",
+        categoryId: "mm-cat-grocery",
+        categoryName: "Grocery",
+        unitId: "unit-box",
+        unitName: "box",
         buyingPrice: 94,
         sellingPrice: 120,
         currentStock: 0,
@@ -519,15 +579,43 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
   "paldo-2": {
     headline: "Service-based inventory with reusable containers, consumables, and refill capacity checks.",
     focusProductId: "wr-prod-1",
-    suggestedCategories: ["Refill Service", "Containers", "Consumables", "Equipment"],
+    categories: [
+      {
+        id: "wr-cat-refill-service",
+        businessId: "paldo-2",
+        name: "Refill Service",
+        createdAt: "2026-02-02T08:00:00+08:00",
+      },
+      {
+        id: "wr-cat-containers",
+        businessId: "paldo-2",
+        name: "Containers",
+        createdAt: "2026-02-02T08:05:00+08:00",
+      },
+      {
+        id: "wr-cat-consumables",
+        businessId: "paldo-2",
+        name: "Consumables",
+        createdAt: "2026-02-02T08:10:00+08:00",
+      },
+      {
+        id: "wr-cat-equipment",
+        businessId: "paldo-2",
+        name: "Equipment",
+        createdAt: "2026-02-02T08:15:00+08:00",
+      },
+    ],
+    units: demoInventoryUnits,
     products: [
       {
         id: "wr-prod-1",
         businessId: "paldo-2",
         name: "Purified Water 5-Gallon Refill",
         sku: "SWR-SVC-001",
-        category: "Refill Service",
-        unit: "piece",
+        categoryId: "wr-cat-refill-service",
+        categoryName: "Refill Service",
+        unitId: "unit-piece",
+        unitName: "piece",
         buyingPrice: 18,
         sellingPrice: 35,
         currentStock: 19,
@@ -541,8 +629,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-2",
         name: "Alkaline Refill 5-Gallon",
         sku: "SWR-SVC-002",
-        category: "Refill Service",
-        unit: "piece",
+        categoryId: "wr-cat-refill-service",
+        categoryName: "Refill Service",
+        unitId: "unit-piece",
+        unitName: "piece",
         buyingPrice: 25,
         sellingPrice: 45,
         currentStock: 11,
@@ -556,8 +646,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-2",
         name: "Sealed Cup 350ml",
         sku: "SWR-CON-003",
-        category: "Containers",
-        unit: "bottle",
+        categoryId: "wr-cat-containers",
+        categoryName: "Containers",
+        unitId: "unit-bottle",
+        unitName: "bottle",
         buyingPrice: 4.5,
         sellingPrice: 10,
         currentStock: 78,
@@ -571,8 +663,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-2",
         name: "Blue Jug Deposit",
         sku: "SWR-CON-004",
-        category: "Containers",
-        unit: "piece",
+        categoryId: "wr-cat-containers",
+        categoryName: "Containers",
+        unitId: "unit-piece",
+        unitName: "piece",
         buyingPrice: 120,
         sellingPrice: 180,
         currentStock: 0,
@@ -586,8 +680,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-2",
         name: "Shrink Cap Roll",
         sku: "SWR-CNS-005",
-        category: "Consumables",
-        unit: "pack",
+        categoryId: "wr-cat-consumables",
+        categoryName: "Consumables",
+        unitId: "unit-pack",
+        unitName: "pack",
         buyingPrice: 65,
         sellingPrice: 98,
         currentStock: 4,
@@ -601,8 +697,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-2",
         name: "UV Lamp Replacement",
         sku: "SWR-EQP-006",
-        category: "Equipment",
-        unit: "other",
+        categoryId: "wr-cat-equipment",
+        categoryName: "Equipment",
+        unitId: "unit-other",
+        unitName: "other",
         buyingPrice: 850,
         sellingPrice: 1100,
         currentStock: 0,
@@ -864,15 +962,43 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
   "paldo-3": {
     headline: "Wholesale stock with higher unit costs, bulk restocks, and reserved archived SKUs.",
     focusProductId: "vt-prod-2",
-    suggestedCategories: ["Construction", "Electrical", "Plumbing", "Fasteners"],
+    categories: [
+      {
+        id: "vt-cat-construction",
+        businessId: "paldo-3",
+        name: "Construction",
+        createdAt: "2026-02-01T07:15:00+08:00",
+      },
+      {
+        id: "vt-cat-electrical",
+        businessId: "paldo-3",
+        name: "Electrical",
+        createdAt: "2026-02-01T07:20:00+08:00",
+      },
+      {
+        id: "vt-cat-plumbing",
+        businessId: "paldo-3",
+        name: "Plumbing",
+        createdAt: "2026-02-01T07:25:00+08:00",
+      },
+      {
+        id: "vt-cat-fasteners",
+        businessId: "paldo-3",
+        name: "Fasteners",
+        createdAt: "2026-02-01T07:30:00+08:00",
+      },
+    ],
+    units: demoInventoryUnits,
     products: [
       {
         id: "vt-prod-1",
         businessId: "paldo-3",
         name: "Portland Cement 40kg",
         sku: "VT-CON-001",
-        category: "Construction",
-        unit: "sack",
+        categoryId: "vt-cat-construction",
+        categoryName: "Construction",
+        unitId: "unit-sack",
+        unitName: "sack",
         buyingPrice: 215,
         sellingPrice: 248,
         currentStock: 64,
@@ -886,8 +1012,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-3",
         name: "GI Tie Wire",
         sku: "VT-CON-002",
-        category: "Construction",
-        unit: "kilo",
+        categoryId: "vt-cat-construction",
+        categoryName: "Construction",
+        unitId: "unit-kilo",
+        unitName: "kilo",
         buyingPrice: 58,
         sellingPrice: 78,
         currentStock: 0,
@@ -901,8 +1029,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-3",
         name: "PVC Elbow 1/2",
         sku: "VT-PLB-003",
-        category: "Plumbing",
-        unit: "box",
+        categoryId: "vt-cat-plumbing",
+        categoryName: "Plumbing",
+        unitId: "unit-box",
+        unitName: "box",
         buyingPrice: 165,
         sellingPrice: 230,
         currentStock: 14,
@@ -916,8 +1046,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-3",
         name: "Roofing Screw",
         sku: "VT-FST-004",
-        category: "Fasteners",
-        unit: "dozen",
+        categoryId: "vt-cat-fasteners",
+        categoryName: "Fasteners",
+        unitId: "unit-dozen",
+        unitName: "dozen",
         buyingPrice: 42,
         sellingPrice: 60,
         currentStock: 22,
@@ -931,8 +1063,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-3",
         name: "Electrical Tape Black",
         sku: "VT-ELC-005",
-        category: "Electrical",
-        unit: "pack",
+        categoryId: "vt-cat-electrical",
+        categoryName: "Electrical",
+        unitId: "unit-pack",
+        unitName: "pack",
         buyingPrice: 96,
         sellingPrice: 130,
         currentStock: 9,
@@ -946,8 +1080,10 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         businessId: "paldo-3",
         name: "Rebar Cut Length",
         sku: "VT-CON-006",
-        category: "Construction",
-        unit: "piece",
+        categoryId: "vt-cat-construction",
+        categoryName: "Construction",
+        unitId: "unit-piece",
+        unitName: "piece",
         buyingPrice: 145,
         sellingPrice: 178,
         currentStock: 0,

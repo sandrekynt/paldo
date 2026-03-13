@@ -40,11 +40,11 @@ import {
 import {
   demoBusinesses,
   getInventoryDemo,
-  inventoryUnitOptions,
+  type DemoCategory,
   type DemoProduct,
   type DemoRestock,
   type DemoStockMovement,
-  type InventoryUnit,
+  type DemoUnitRecord,
 } from "@/lib/dummy-data"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -190,12 +190,58 @@ function getSignedAdjustmentQuantity(draft: AdjustmentDraft) {
   return draft.direction === "subtract" ? -quantity : quantity
 }
 
+function normalizeOptionValues(values: string[]) {
+  return values.reduce<string[]>((result, value) => {
+    const trimmed = value.trim()
+
+    if (
+      trimmed.length > 0 &&
+      !result.some(
+        (existing) => existing.toLowerCase() === trimmed.toLowerCase()
+      )
+    ) {
+      result.push(trimmed)
+    }
+
+    return result
+  }, [])
+}
+
+function createCategoryRecord(name: string, businessId: string): DemoCategory {
+  const createdAt = new Date().toISOString()
+  const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
+
+  return {
+    id: `cat-${businessId}-${idSuffix}-${name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")}`,
+    businessId,
+    name: name.trim(),
+    createdAt,
+  }
+}
+
+function createUnitRecord(name: string): DemoUnitRecord {
+  const createdAt = new Date().toISOString()
+  const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
+
+  return {
+    id: `unit-${idSuffix}-${name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")}`,
+    name: name.trim(),
+    createdAt,
+  }
+}
+
 function getDraftFromProduct(product: DemoProduct): ProductFormDraft {
   return {
     name: product.name,
     sku: product.sku,
-    category: product.category,
-    unit: product.unit,
+    category: product.categoryName,
+    unit: product.unitName,
     buyingPrice: product.buyingPrice.toFixed(2),
     sellingPrice: product.sellingPrice.toFixed(2),
     lowStockThreshold: String(product.lowStockThreshold),
@@ -318,9 +364,7 @@ function SearchableOptionSelect({
       return
     }
 
-    const parentSheet = rootRef.current?.closest(
-      '[data-slot="sheet-content"]'
-    )
+    const parentSheet = rootRef.current?.closest('[data-slot="sheet-content"]')
 
     if (!(parentSheet instanceof HTMLElement)) {
       return
@@ -637,10 +681,7 @@ function ProductForm({
             />
           </Field>
         ) : null}
-        <Field
-          label="Low stock threshold"
-          error={errors.lowStockThreshold}
-        >
+        <Field label="Low stock threshold" error={errors.lowStockThreshold}>
           <Input
             value={draft.lowStockThreshold}
             onChange={(event) =>
@@ -704,11 +745,7 @@ function AdjustmentDirectionSelect({
   const selectedDirection = getAdjustmentDirectionMeta(value)
 
   return (
-    <PopoverPrimitive.Root
-      modal={false}
-      open={open}
-      onOpenChange={setOpen}
-    >
+    <PopoverPrimitive.Root modal={false} open={open} onOpenChange={setOpen}>
       <PopoverPrimitive.Trigger
         render={
           <Button
@@ -747,7 +784,8 @@ function AdjustmentDirectionSelect({
                           type="button"
                           className={cn(
                             "flex w-full items-center justify-center border border-transparent px-0 py-2 text-left text-xs",
-                            direction === value && "border-primary bg-primary/10"
+                            direction === value &&
+                              "border-primary bg-primary/10"
                           )}
                           onClick={() => {
                             onChange(direction)
@@ -822,7 +860,7 @@ function ProductDetailItem({
 }) {
   return (
     <div className={cn("grid gap-1", align === "right" && "text-right")}>
-      <p className="text-[11px] uppercase text-muted-foreground">{label}</p>
+      <p className="text-[11px] text-muted-foreground uppercase">{label}</p>
       <div>{value}</div>
     </div>
   )
@@ -831,7 +869,7 @@ function ProductDetailItem({
 function ProductActionSummary({
   product,
 }: {
-  product: Pick<DemoProduct, "name" | "currentStock" | "unit">
+  product: Pick<DemoProduct, "name" | "currentStock" | "unitName">
 }) {
   return (
     <div className="grid gap-4 border border-border p-4 md:grid-cols-2">
@@ -843,7 +881,7 @@ function ProductActionSummary({
         label="Stock qty"
         value={
           <p className="text-sm">
-            {product.currentStock} {product.unit}
+            {product.currentStock} {product.unitName}
           </p>
         }
       />
@@ -869,7 +907,7 @@ function ProductListRow({
         <p className="text-[11px] text-muted-foreground">{product.sku}</p>
       </td>
       <td className="px-3 py-3 text-xs text-muted-foreground">
-        {product.category}
+        {product.categoryName}
       </td>
       <td className="px-3 py-3 text-xs">
         {formatCurrency(product.buyingPrice, currency)}
@@ -880,7 +918,7 @@ function ProductListRow({
       <td className="px-3 py-3 text-xs">
         <div className="flex items-center gap-2">
           <span>{product.currentStock}</span>
-          <span className="text-muted-foreground">{product.unit}</span>
+          <span className="text-muted-foreground">{product.unitName}</span>
         </div>
       </td>
       <td className="px-3 py-3 text-xs">{product.lowStockThreshold}</td>
@@ -943,19 +981,20 @@ export function InventoryWorkspace({
   const [products, setProducts] = React.useState<DemoProduct[]>(
     inventory.products
   )
-  const [, setRestockEntries] = React.useState<DemoRestock[]>(inventory.restocks)
-  const [stockMovements, setStockMovements] = React.useState<DemoStockMovement[]>(
-    inventory.stockMovements
+  const [, setRestockEntries] = React.useState<DemoRestock[]>(
+    inventory.restocks
   )
-  const [categoryOptions, setCategoryOptions] = React.useState<string[]>(
-    inventory.suggestedCategories
+  const [stockMovements, setStockMovements] = React.useState<
+    DemoStockMovement[]
+  >(inventory.stockMovements)
+  const [categories, setCategories] = React.useState<DemoCategory[]>(
+    inventory.categories
   )
-  const [unitOptions, setUnitOptions] = React.useState<string[]>(
-    Array.from(inventoryUnitOptions)
-  )
+  const [units, setUnits] = React.useState<DemoUnitRecord[]>(inventory.units)
   const [optionDialog, setOptionDialog] =
     React.useState<OptionDialogState | null>(null)
   const [optionDialogValue, setOptionDialogValue] = React.useState("")
+  const [optionDialogError, setOptionDialogError] = React.useState("")
   const [viewingProductId, setViewingProductId] = React.useState<string | null>(
     null
   )
@@ -973,16 +1012,21 @@ export function InventoryWorkspace({
     createEmptyRestockDraft()
   )
   const [restockErrors, setRestockErrors] = React.useState<FieldErrors>({})
-  const [adjustmentProductId, setAdjustmentProductId] =
-    React.useState<string | null>(null)
-  const [adjustmentDraft, setAdjustmentDraft] =
-    React.useState<AdjustmentDraft>(createEmptyAdjustmentDraft())
+  const [adjustmentProductId, setAdjustmentProductId] = React.useState<
+    string | null
+  >(null)
+  const [adjustmentDraft, setAdjustmentDraft] = React.useState<AdjustmentDraft>(
+    createEmptyAdjustmentDraft()
+  )
   const [adjustmentErrors, setAdjustmentErrors] = React.useState<FieldErrors>(
     {}
   )
-  const [deleteProductOpen, setDeleteProductOpen] = React.useState(false)
+  const [archiveProductOpen, setArchiveProductOpen] = React.useState(false)
   const [filtersOpen, setFiltersOpen] = React.useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false)
+  const [selectedCategories, setSelectedCategories] = React.useState<string[]>(
+    []
+  )
   const filtersRef = React.useRef<HTMLDivElement>(null)
   const viewSheetScrollRef = React.useRef<HTMLDivElement | null>(null)
 
@@ -1002,6 +1046,7 @@ export function InventoryWorkspace({
 
   React.useEffect(() => {
     setSelectedStatuses(defaultStatuses)
+    setSelectedCategories([])
     setSearchQuery("")
     setPage(1)
     setAddProductOpen(false)
@@ -1010,10 +1055,11 @@ export function InventoryWorkspace({
     setProducts(inventory.products)
     setRestockEntries(inventory.restocks)
     setStockMovements(inventory.stockMovements)
-    setCategoryOptions(inventory.suggestedCategories)
-    setUnitOptions(Array.from(inventoryUnitOptions))
+    setCategories(inventory.categories)
+    setUnits(inventory.units)
     setOptionDialog(null)
     setOptionDialogValue("")
+    setOptionDialogError("")
     setViewingProductId(null)
     setEditDraft(null)
     setEditErrors({})
@@ -1024,8 +1070,22 @@ export function InventoryWorkspace({
     setAdjustmentProductId(null)
     setAdjustmentDraft(createEmptyAdjustmentDraft())
     setAdjustmentErrors({})
-    setDeleteProductOpen(false)
+    setArchiveProductOpen(false)
   }, [inventory])
+
+  const categoryOptions = React.useMemo(
+    () => categories.map((category) => category.name),
+    [categories]
+  )
+  const unitOptions = React.useMemo(
+    () => units.map((unit) => unit.name),
+    [units]
+  )
+  const availableCategories = React.useMemo(
+    () =>
+      [...categoryOptions].sort((first, second) => first.localeCompare(second)),
+    [categoryOptions]
+  )
 
   const filteredProducts = products.filter((product) => {
     const normalizedQuery = searchQuery.trim().toLowerCase()
@@ -1033,9 +1093,12 @@ export function InventoryWorkspace({
       normalizedQuery.length === 0 ||
       product.name.toLowerCase().includes(normalizedQuery) ||
       product.sku.toLowerCase().includes(normalizedQuery) ||
-      product.category.toLowerCase().includes(normalizedQuery)
+      product.categoryName.toLowerCase().includes(normalizedQuery)
+    const matchesCategory =
+      selectedCategories.length === 0 ||
+      selectedCategories.includes(product.categoryName)
 
-    if (!matchesQuery) {
+    if (!matchesQuery || !matchesCategory) {
       return false
     }
 
@@ -1047,7 +1110,7 @@ export function InventoryWorkspace({
 
   React.useEffect(() => {
     setPage(1)
-  }, [searchQuery, selectedStatuses, selectedBusinessId])
+  }, [searchQuery, selectedStatuses, selectedCategories, selectedBusinessId])
 
   const totalPages = Math.max(
     1,
@@ -1061,6 +1124,8 @@ export function InventoryWorkspace({
   const outOfStockCount = activeProducts.filter(
     (product) => getProductStatus(product) === "out"
   ).length
+  const totalSelectedFilters =
+    selectedStatuses.length + selectedCategories.length
   const currentPage = Math.min(page, totalPages)
   const pageStart = (currentPage - 1) * PRODUCTS_PER_PAGE
   const paginatedProducts = filteredProducts.slice(
@@ -1083,11 +1148,15 @@ export function InventoryWorkspace({
     adjustmentProductId !== null
       ? (products.find((product) => product.id === adjustmentProductId) ?? null)
       : null
+  const isEditingArchivedProduct = editingProduct
+    ? !editingProduct.isActive
+    : false
   const viewingProductMovements = stockMovements
     .filter((movement) => movement.productId === viewingProductId)
     .sort(
       (first, second) =>
-        new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime()
+        new Date(second.createdAt).getTime() -
+        new Date(first.createdAt).getTime()
     )
 
   React.useLayoutEffect(() => {
@@ -1157,14 +1226,17 @@ export function InventoryWorkspace({
     setEditingProductId(null)
     setEditDraft(null)
     setEditErrors({})
-    setDeleteProductOpen(false)
+    setArchiveProductOpen(false)
   }
 
   function closeViewModal() {
     setViewingProductId(null)
   }
 
-  function clearFieldError(field: string, setter: React.Dispatch<React.SetStateAction<FieldErrors>>) {
+  function clearFieldError(
+    field: string,
+    setter: React.Dispatch<React.SetStateAction<FieldErrors>>
+  ) {
     setter((current) => {
       if (!current[field]) {
         return current
@@ -1251,7 +1323,12 @@ export function InventoryWorkspace({
     )
 
     if (mode === "add" && "openingStock" in draft) {
-      validateNonNegativeNumber(errors, "openingStock", draft.openingStock, "quantity")
+      validateNonNegativeNumber(
+        errors,
+        "openingStock",
+        draft.openingStock,
+        "quantity"
+      )
     }
 
     return errors
@@ -1301,13 +1378,43 @@ export function InventoryWorkspace({
     return errors
   }
 
+  function resolveProductRelations(draft: ProductFormDraft | AddProductDraft) {
+    const categoryName = draft.category.trim()
+    const unitName = draft.unit.trim()
+    const errors: FieldErrors = {}
+
+    const categoryRecord = categories.find(
+      (category) => category.name === categoryName
+    )
+    const unitRecord = units.find((unit) => unit.name === unitName)
+
+    if (!categoryRecord) {
+      errors.category = "Select a valid category"
+    }
+
+    if (!unitRecord) {
+      errors.unit = "Select a valid unit"
+    }
+
+    return { categoryRecord, unitRecord, errors }
+  }
+
   function saveAddProduct() {
     const errors = validateProductDraft(addDraft, "add")
+    const relationResolution = resolveProductRelations(addDraft)
+    Object.assign(errors, relationResolution.errors)
     setAddErrors(errors)
 
     if (Object.keys(errors).length > 0) {
       return
     }
+
+    if (!relationResolution.categoryRecord || !relationResolution.unitRecord) {
+      return
+    }
+
+    const categoryRecord = relationResolution.categoryRecord
+    const unitRecord = relationResolution.unitRecord
 
     const createdAt = new Date().toISOString()
     const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
@@ -1318,8 +1425,10 @@ export function InventoryWorkspace({
         businessId: business.id,
         name: addDraft.name.trim(),
         sku: addDraft.sku.trim(),
-        category: addDraft.category.trim(),
-        unit: addDraft.unit.trim() as InventoryUnit,
+        categoryId: categoryRecord.id,
+        categoryName: categoryRecord.name,
+        unitId: unitRecord.id,
+        unitName: unitRecord.name,
         buyingPrice: Number(addDraft.buyingPrice),
         sellingPrice: Number(addDraft.sellingPrice),
         currentStock: Number(addDraft.openingStock),
@@ -1339,11 +1448,20 @@ export function InventoryWorkspace({
     }
 
     const errors = validateProductDraft(editDraft, "edit")
+    const relationResolution = resolveProductRelations(editDraft)
+    Object.assign(errors, relationResolution.errors)
     setEditErrors(errors)
 
     if (Object.keys(errors).length > 0) {
       return
     }
+
+    if (!relationResolution.categoryRecord || !relationResolution.unitRecord) {
+      return
+    }
+
+    const categoryRecord = relationResolution.categoryRecord
+    const unitRecord = relationResolution.unitRecord
 
     const updatedAt = new Date().toISOString()
 
@@ -1354,8 +1472,10 @@ export function InventoryWorkspace({
               ...product,
               name: editDraft.name.trim(),
               sku: editDraft.sku.trim(),
-              category: editDraft.category.trim(),
-              unit: editDraft.unit.trim() as InventoryUnit,
+              categoryId: categoryRecord.id,
+              categoryName: categoryRecord.name,
+              unitId: unitRecord.id,
+              unitName: unitRecord.name,
               buyingPrice: Number(editDraft.buyingPrice),
               sellingPrice: Number(editDraft.sellingPrice),
               lowStockThreshold: Number(editDraft.lowStockThreshold),
@@ -1505,13 +1625,34 @@ export function InventoryWorkspace({
     closeAdjustmentModal()
   }
 
-  function confirmDeleteProduct() {
-    if (!editingProductId) {
+  function toggleCategoryFilter(category: string) {
+    setSelectedCategories((current) =>
+      current.includes(category)
+        ? current.filter((value) => value !== category)
+        : [...current, category]
+    )
+  }
+
+  function clearFilters() {
+    setSelectedStatuses([])
+    setSelectedCategories([])
+  }
+
+  function confirmArchiveProduct() {
+    if (!editingProductId || !editingProduct) {
       return
     }
 
     setProducts((current) =>
-      current.filter((product) => product.id !== editingProductId)
+      current.map((product) =>
+        product.id === editingProductId
+          ? {
+              ...product,
+              isActive: !product.isActive,
+              updatedAt: new Date().toISOString(),
+            }
+          : product
+      )
     )
     closeEditModal()
   }
@@ -1523,20 +1664,43 @@ export function InventoryWorkspace({
   ) {
     setOptionDialog({ field, action, value })
     setOptionDialogValue(value)
+    setOptionDialogError("")
   }
 
   function closeOptionDialog() {
     setOptionDialog(null)
     setOptionDialogValue("")
+    setOptionDialogError("")
   }
 
   function updateFieldOptions(field: OptionField, values: string[]) {
+    const normalizedValues = normalizeOptionValues(values)
+
     if (field === "category") {
-      setCategoryOptions(values)
+      setCategories((current) => {
+        const existingByName = new Map(
+          current.map((category) => [category.name.toLowerCase(), category])
+        )
+
+        return normalizedValues.map(
+          (value) =>
+            existingByName.get(value.toLowerCase()) ??
+            createCategoryRecord(value, business.id)
+        )
+      })
       return
     }
 
-    setUnitOptions(values)
+    setUnits((current) => {
+      const existingByName = new Map(
+        current.map((unit) => [unit.name.toLowerCase(), unit])
+      )
+
+      return normalizedValues.map(
+        (value) =>
+          existingByName.get(value.toLowerCase()) ?? createUnitRecord(value)
+      )
+    })
   }
 
   function updateDraftFieldValue(
@@ -1545,7 +1709,8 @@ export function InventoryWorkspace({
     previousValue: string
   ) {
     setAddDraft((current) =>
-      field in current && current[field as keyof AddProductDraft] === previousValue
+      field in current &&
+      current[field as keyof AddProductDraft] === previousValue
         ? { ...current, [field]: nextValue }
         : current
     )
@@ -1563,38 +1728,134 @@ export function InventoryWorkspace({
       return
     }
 
-    const sourceOptions =
-      optionDialog.field === "category" ? categoryOptions : unitOptions
+    const trimmed = optionDialogValue.trim()
 
     if (optionDialog.action === "edit") {
-      const trimmed = optionDialogValue.trim()
-
       if (!trimmed || trimmed === optionDialog.value) {
         closeOptionDialog()
         return
       }
 
-      const nextOptions = sourceOptions.reduce<string[]>((result, option) => {
-        const nextOption = option === optionDialog.value ? trimmed : option
+      const lowerTrimmed = trimmed.toLowerCase()
+      const hasDuplicate =
+        optionDialog.field === "category"
+          ? categories.some(
+              (category) =>
+                category.name.toLowerCase() === lowerTrimmed &&
+                category.name !== optionDialog.value
+            )
+          : units.some(
+              (unit) =>
+                unit.name.toLowerCase() === lowerTrimmed &&
+                unit.name !== optionDialog.value
+            )
 
-        if (!result.includes(nextOption)) {
-          result.push(nextOption)
+      if (hasDuplicate) {
+        setOptionDialogError(
+          `A ${optionDialog.field} with this name already exists.`
+        )
+        return
+      }
+
+      if (optionDialog.field === "category") {
+        const currentCategory = categories.find(
+          (category) => category.name === optionDialog.value
+        )
+
+        if (!currentCategory) {
+          closeOptionDialog()
+          return
         }
 
-        return result
-      }, [])
+        setCategories((current) =>
+          current.map((category) =>
+            category.id === currentCategory.id
+              ? { ...category, name: trimmed }
+              : category
+          )
+        )
+        setProducts((current) =>
+          current.map((product) =>
+            product.categoryId === currentCategory.id
+              ? { ...product, categoryName: trimmed }
+              : product
+          )
+        )
+        setSelectedCategories((current) =>
+          current.map((category) =>
+            category === optionDialog.value ? trimmed : category
+          )
+        )
+      } else {
+        const currentUnit = units.find(
+          (unit) => unit.name === optionDialog.value
+        )
 
-      updateFieldOptions(optionDialog.field, nextOptions)
+        if (!currentUnit) {
+          closeOptionDialog()
+          return
+        }
+
+        setUnits((current) =>
+          current.map((unit) =>
+            unit.id === currentUnit.id ? { ...unit, name: trimmed } : unit
+          )
+        )
+        setProducts((current) =>
+          current.map((product) =>
+            product.unitId === currentUnit.id
+              ? { ...product, unitName: trimmed }
+              : product
+          )
+        )
+      }
+
       updateDraftFieldValue(optionDialog.field, trimmed, optionDialog.value)
       closeOptionDialog()
       return
     }
 
-    const nextOptions = sourceOptions.filter(
-      (option) => option !== optionDialog.value
-    )
+    if (optionDialog.field === "category") {
+      const currentCategory = categories.find(
+        (category) => category.name === optionDialog.value
+      )
 
-    updateFieldOptions(optionDialog.field, nextOptions)
+      if (!currentCategory) {
+        closeOptionDialog()
+        return
+      }
+
+      if (
+        products.some((product) => product.categoryId === currentCategory.id)
+      ) {
+        setOptionDialogError("This category is used by existing products.")
+        return
+      }
+
+      setCategories((current) =>
+        current.filter((category) => category.id !== currentCategory.id)
+      )
+      setSelectedCategories((current) =>
+        current.filter((category) => category !== optionDialog.value)
+      )
+    } else {
+      const currentUnit = units.find((unit) => unit.name === optionDialog.value)
+
+      if (!currentUnit) {
+        closeOptionDialog()
+        return
+      }
+
+      if (products.some((product) => product.unitId === currentUnit.id)) {
+        setOptionDialogError("This unit is used by existing products.")
+        return
+      }
+
+      setUnits((current) =>
+        current.filter((unit) => unit.id !== currentUnit.id)
+      )
+    }
+
     updateDraftFieldValue(optionDialog.field, "", optionDialog.value)
     closeOptionDialog()
   }
@@ -1647,8 +1908,12 @@ export function InventoryWorkspace({
                       setAddDraft((current) => ({ ...current, [field]: value }))
                       clearFieldError(field, setAddErrors)
                     }}
-                    onCategoryOptionsChange={setCategoryOptions}
-                    onUnitOptionsChange={setUnitOptions}
+                    onCategoryOptionsChange={(values) =>
+                      updateFieldOptions("category", values)
+                    }
+                    onUnitOptionsChange={(values) =>
+                      updateFieldOptions("unit", values)
+                    }
                     onRequestCategoryEdit={(value) =>
                       openOptionDialog("category", "edit", value)
                     }
@@ -1718,7 +1983,7 @@ export function InventoryWorkspace({
                               label="Category"
                               value={
                                 <p className="text-sm">
-                                  {viewingProduct.category}
+                                  {viewingProduct.categoryName}
                                 </p>
                               }
                             />
@@ -1737,7 +2002,8 @@ export function InventoryWorkspace({
                               label="Stock qty"
                               value={
                                 <p className="text-sm">
-                                  {viewingProduct.currentStock} {viewingProduct.unit}
+                                  {viewingProduct.currentStock}{" "}
+                                  {viewingProduct.unitName}
                                 </p>
                               }
                             />
@@ -1751,7 +2017,11 @@ export function InventoryWorkspace({
                             <ProductDetailItem
                               label="Unit"
                               align="right"
-                              value={<p className="text-sm">{viewingProduct.unit}</p>}
+                              value={
+                                <p className="text-sm">
+                                  {viewingProduct.unitName}
+                                </p>
+                              }
                             />
                             <ProductDetailItem
                               label="Selling price"
@@ -1792,17 +2062,25 @@ export function InventoryWorkspace({
                           />
                           <ProductDetailItem
                             label="SKU"
-                            value={<p className="text-sm">{viewingProduct.sku}</p>}
+                            value={
+                              <p className="text-sm">{viewingProduct.sku}</p>
+                            }
                           />
                           <ProductDetailItem
                             label="Category"
                             value={
-                              <p className="text-sm">{viewingProduct.category}</p>
+                              <p className="text-sm">
+                                {viewingProduct.categoryName}
+                              </p>
                             }
                           />
                           <ProductDetailItem
                             label="Unit"
-                            value={<p className="text-sm">{viewingProduct.unit}</p>}
+                            value={
+                              <p className="text-sm">
+                                {viewingProduct.unitName}
+                              </p>
+                            }
                           />
                           <ProductDetailItem
                             label="Buying price"
@@ -1830,7 +2108,8 @@ export function InventoryWorkspace({
                             label="Stock qty"
                             value={
                               <p className="text-sm">
-                                {viewingProduct.currentStock} {viewingProduct.unit}
+                                {viewingProduct.currentStock}{" "}
+                                {viewingProduct.unitName}
                               </p>
                             }
                           />
@@ -1849,7 +2128,8 @@ export function InventoryWorkspace({
                         <Button
                           variant="outline"
                           onClick={() =>
-                            viewingProduct && openRestockModal(viewingProduct.id)
+                            viewingProduct &&
+                            openRestockModal(viewingProduct.id)
                           }
                         >
                           Restock
@@ -1876,7 +2156,7 @@ export function InventoryWorkspace({
                         </div>
                         {viewingProductMovements.length > 0 ? (
                           <div className="grid gap-2">
-                            {viewingProductMovements.map((movement) => (
+                            {viewingProductMovements.map((movement) =>
                               isMobile ? (
                                 <div
                                   key={movement.id}
@@ -1897,7 +2177,7 @@ export function InventoryWorkspace({
                                   </div>
                                   <div className="grid gap-3 text-right text-xs">
                                     <div className="grid gap-1">
-                                      <p className="text-[11px] uppercase text-muted-foreground">
+                                      <p className="text-[11px] text-muted-foreground uppercase">
                                         Change
                                       </p>
                                       <p
@@ -1915,7 +2195,7 @@ export function InventoryWorkspace({
                                       </p>
                                     </div>
                                     <div className="grid gap-1">
-                                      <p className="text-[11px] uppercase text-muted-foreground">
+                                      <p className="text-[11px] text-muted-foreground uppercase">
                                         Stock
                                       </p>
                                       <p className="font-medium">
@@ -1944,7 +2224,7 @@ export function InventoryWorkspace({
                                     </p>
                                   </div>
                                   <div className="grid gap-1 text-xs">
-                                    <p className="text-[11px] uppercase text-muted-foreground">
+                                    <p className="text-[11px] text-muted-foreground uppercase">
                                       Change
                                     </p>
                                     <p
@@ -1962,7 +2242,7 @@ export function InventoryWorkspace({
                                     </p>
                                   </div>
                                   <div className="grid gap-1 text-xs">
-                                    <p className="text-[11px] uppercase text-muted-foreground">
+                                    <p className="text-[11px] text-muted-foreground uppercase">
                                       Stock
                                     </p>
                                     <p className="font-medium">
@@ -1972,7 +2252,7 @@ export function InventoryWorkspace({
                                   </div>
                                 </div>
                               )
-                            ))}
+                            )}
                           </div>
                         ) : (
                           <div className="border border-border p-4 text-xs text-muted-foreground">
@@ -2031,9 +2311,7 @@ export function InventoryWorkspace({
                   <SheetClose render={<Button variant="secondary" />}>
                     Cancel
                   </SheetClose>
-                  <Button onClick={applyRestock}>
-                    Save restock
-                  </Button>
+                  <Button onClick={applyRestock}>Save restock</Button>
                 </SheetFooter>
               </SheetContent>
             </Sheet>
@@ -2078,9 +2356,7 @@ export function InventoryWorkspace({
                   <SheetClose render={<Button variant="secondary" />}>
                     Cancel
                   </SheetClose>
-                  <Button onClick={applyAdjustment}>
-                    Save adjustment
-                  </Button>
+                  <Button onClick={applyAdjustment}>Save adjustment</Button>
                 </SheetFooter>
               </SheetContent>
             </Sheet>
@@ -2117,8 +2393,12 @@ export function InventoryWorkspace({
                         )
                         clearFieldError(field, setEditErrors)
                       }}
-                      onCategoryOptionsChange={setCategoryOptions}
-                      onUnitOptionsChange={setUnitOptions}
+                      onCategoryOptionsChange={(values) =>
+                        updateFieldOptions("category", values)
+                      }
+                      onUnitOptionsChange={(values) =>
+                        updateFieldOptions("unit", values)
+                      }
                       onRequestCategoryEdit={(value) =>
                         openOptionDialog("category", "edit", value)
                       }
@@ -2136,10 +2416,12 @@ export function InventoryWorkspace({
                 </div>
                 <SheetFooter className="flex-row justify-between border-t">
                   <Button
-                    variant="destructive"
-                    onClick={() => setDeleteProductOpen(true)}
+                    variant={
+                      isEditingArchivedProduct ? "outline" : "destructive"
+                    }
+                    onClick={() => setArchiveProductOpen(true)}
                   >
-                    Delete
+                    {isEditingArchivedProduct ? "Restore" : "Archive"}
                   </Button>
                   <div className="flex items-center gap-2">
                     <SheetClose render={<Button variant="secondary" />}>
@@ -2151,7 +2433,10 @@ export function InventoryWorkspace({
               </SheetContent>
             </Sheet>
 
-            <Sheet open={deleteProductOpen} onOpenChange={setDeleteProductOpen}>
+            <Sheet
+              open={archiveProductOpen}
+              onOpenChange={setArchiveProductOpen}
+            >
               <SheetContent
                 side={isMobile ? "bottom" : "center"}
                 className={cn(
@@ -2160,11 +2445,15 @@ export function InventoryWorkspace({
                 )}
               >
                 <SheetHeader className="border-b">
-                  <SheetTitle>Delete product</SheetTitle>
+                  <SheetTitle>
+                    {isEditingArchivedProduct
+                      ? "Restore product"
+                      : "Archive product"}
+                  </SheetTitle>
                 </SheetHeader>
                 <div className="grid gap-4 p-4">
                   <p className="text-xs text-muted-foreground">
-                    Delete{" "}
+                    {isEditingArchivedProduct ? "Restore" : "Archive"}{" "}
                     <span className="font-medium text-foreground">
                       {editingProduct?.name ?? "this product"}
                     </span>
@@ -2177,10 +2466,12 @@ export function InventoryWorkspace({
                       Cancel
                     </SheetClose>
                     <Button
-                      variant="destructive"
-                      onClick={confirmDeleteProduct}
+                      variant={
+                        isEditingArchivedProduct ? "default" : "destructive"
+                      }
+                      onClick={confirmArchiveProduct}
                     >
-                      Delete
+                      {isEditingArchivedProduct ? "Restore" : "Archive"}
                     </Button>
                   </div>
                 </SheetFooter>
@@ -2212,16 +2503,15 @@ export function InventoryWorkspace({
                   {optionDialog?.action === "edit" ? (
                     <Field
                       label={
-                        optionDialog.field === "category"
-                          ? "Category"
-                          : "Unit"
+                        optionDialog.field === "category" ? "Category" : "Unit"
                       }
                     >
                       <Input
                         value={optionDialogValue}
-                        onChange={(event) =>
+                        onChange={(event) => {
                           setOptionDialogValue(event.target.value)
-                        }
+                          setOptionDialogError("")
+                        }}
                       />
                     </Field>
                   ) : (
@@ -2234,6 +2524,11 @@ export function InventoryWorkspace({
                       ?
                     </p>
                   )}
+                  {optionDialogError ? (
+                    <p className="text-[11px] text-red-600">
+                      {optionDialogError}
+                    </p>
+                  ) : null}
                 </div>
                 <SheetFooter
                   className={cn(
@@ -2281,41 +2576,63 @@ export function InventoryWorkspace({
                 >
                   <SlidersHorizontal className="size-4" />
                   Filters
-                  {selectedStatuses.length > 0
-                    ? ` (${selectedStatuses.length})`
-                    : ""}
+                  {totalSelectedFilters > 0 ? ` (${totalSelectedFilters})` : ""}
                 </Button>
                 {filtersOpen ? (
-                  <div className="absolute top-full right-0 z-20 mt-2 w-44 border border-border bg-popover p-4 shadow-sm">
+                  <div className="absolute top-full right-0 z-20 mt-2 w-56 border border-border bg-popover p-4 shadow-sm">
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium">Statuses</p>
+                      <p className="text-xs font-medium">Filters</p>
                       <button
                         type="button"
                         className="text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() => setSelectedStatuses([])}
+                        onClick={clearFilters}
                       >
                         Clear
                       </button>
                     </div>
-                    <div className="grid gap-3 text-xs">
-                      {statusOptions.map((item) => {
-                        const checked = selectedStatuses.includes(item.id)
+                    <div className="grid gap-4 text-xs">
+                      <div className="grid gap-3">
+                        <p className="font-medium">Categories</p>
+                        {availableCategories.map((category) => {
+                          const checked = selectedCategories.includes(category)
 
-                        return (
-                          <label
-                            key={item.id}
-                            className="flex items-center gap-3 text-foreground"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleStatus(item.id)}
-                              className="size-4 rounded-none border border-input accent-(--color-primary)"
-                            />
-                            <span>{item.label}</span>
-                          </label>
-                        )
-                      })}
+                          return (
+                            <label
+                              key={category}
+                              className="flex items-center gap-3 text-foreground"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleCategoryFilter(category)}
+                                className="size-4 rounded-none border border-input accent-(--color-primary)"
+                              />
+                              <span>{category}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                      <div className="grid gap-3">
+                        <p className="font-medium">Statuses</p>
+                        {statusOptions.map((item) => {
+                          const checked = selectedStatuses.includes(item.id)
+
+                          return (
+                            <label
+                              key={item.id}
+                              className="flex items-center gap-3 text-foreground"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleStatus(item.id)}
+                                className="size-4 rounded-none border border-input accent-(--color-primary)"
+                              />
+                              <span>{item.label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
                     </div>
                   </div>
                 ) : null}
@@ -2334,8 +2651,8 @@ export function InventoryWorkspace({
                     >
                       <SlidersHorizontal className="size-4" />
                       Filters
-                      {selectedStatuses.length > 0
-                        ? ` (${selectedStatuses.length})`
+                      {totalSelectedFilters > 0
+                        ? ` (${totalSelectedFilters})`
                         : ""}
                     </Button>
                   }
@@ -2349,34 +2666,58 @@ export function InventoryWorkspace({
                   </SheetHeader>
                   <div className="grid gap-4 overflow-y-auto p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-medium">Statuses</p>
+                      <p className="text-xs font-medium">Filters</p>
                       <button
                         type="button"
                         className="text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() => setSelectedStatuses([])}
+                        onClick={clearFilters}
                       >
                         Clear
                       </button>
                     </div>
-                    <div className="grid gap-3 text-xs">
-                      {statusOptions.map((item) => {
-                        const checked = selectedStatuses.includes(item.id)
+                    <div className="grid gap-4 text-xs">
+                      <div className="grid gap-3">
+                        <p className="font-medium">Categories</p>
+                        {availableCategories.map((category) => {
+                          const checked = selectedCategories.includes(category)
 
-                        return (
-                          <label
-                            key={item.id}
-                            className="flex items-center gap-3 text-foreground"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleStatus(item.id)}
-                              className="size-4 rounded-none border border-input accent-(--color-primary)"
-                            />
-                            <span>{item.label}</span>
-                          </label>
-                        )
-                      })}
+                          return (
+                            <label
+                              key={category}
+                              className="flex items-center gap-3 text-foreground"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleCategoryFilter(category)}
+                                className="size-4 rounded-none border border-input accent-(--color-primary)"
+                              />
+                              <span>{category}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                      <div className="grid gap-3">
+                        <p className="font-medium">Statuses</p>
+                        {statusOptions.map((item) => {
+                          const checked = selectedStatuses.includes(item.id)
+
+                          return (
+                            <label
+                              key={item.id}
+                              className="flex items-center gap-3 text-foreground"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleStatus(item.id)}
+                                className="size-4 rounded-none border border-input accent-(--color-primary)"
+                              />
+                              <span>{item.label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
                     </div>
                   </div>
                   <SheetFooter className="border-t">
@@ -2427,7 +2768,7 @@ export function InventoryWorkspace({
                   <div>
                     <p className="text-sm font-medium">{product.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {product.category} · {product.unit}
+                      {product.categoryName} · {product.unitName}
                     </p>
                   </div>
                   {getStatusBadge(product)}
@@ -2469,7 +2810,7 @@ export function InventoryWorkspace({
 
           {filteredProducts.length === 0 ? (
             <div className="border border-border bg-muted/20 p-6 text-center text-xs text-muted-foreground">
-              No products match this filter yet.
+              No products match this filter.
             </div>
           ) : null}
         </CardContent>
