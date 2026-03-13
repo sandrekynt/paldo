@@ -55,6 +55,7 @@ function getSheetClassName(
 export function AddProductSheet({
   isMobile,
   open,
+  triggerId,
   trigger,
   draft,
   categoryOptions,
@@ -72,6 +73,7 @@ export function AddProductSheet({
 }: {
   isMobile: boolean
   open: boolean
+  triggerId?: string
   trigger: React.ReactElement
   draft: AddProductDraft
   categoryOptions: string[]
@@ -89,7 +91,7 @@ export function AddProductSheet({
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger render={trigger} />
+      <SheetTrigger id={triggerId} render={trigger} />
       <SheetContent
         side={isMobile ? "bottom" : "center"}
         className={getSheetClassName(

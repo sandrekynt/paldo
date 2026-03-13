@@ -83,6 +83,7 @@ function MobileBusinessSwitcher({
   return (
     <Sheet>
       <SheetTrigger
+        id="mobile-business-switcher-trigger"
         render={
           <BusinessSelectorTrigger
             businessId={selectedBusinessId}

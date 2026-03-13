@@ -53,6 +53,7 @@ function ProductListRow({
         <div className="flex items-center justify-center gap-1">
           <Tooltip>
             <TooltipTrigger
+              id={`product-view-trigger-${product.id}`}
               render={
                 <Button
                   variant="outline"
@@ -68,6 +69,7 @@ function ProductListRow({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger
+              id={`product-edit-trigger-${product.id}`}
               render={
                 <Button
                   variant="outline"

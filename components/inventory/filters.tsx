@@ -135,6 +135,7 @@ export function InventoryFilters({
     <div className="justify-self-end">
       <div ref={filtersRef} className="relative hidden md:block">
         <Button
+          id="inventory-desktop-filters-button"
           size="default"
           variant="outline"
           className={cn("h-8", filtersOpen && "border-primary")}
@@ -160,6 +161,7 @@ export function InventoryFilters({
 
       <Sheet open={mobileFiltersOpen} onOpenChange={onMobileFiltersOpenChange}>
         <SheetTrigger
+          id="inventory-mobile-filters-trigger"
           render={
             <Button size="default" variant="outline" className="h-8 md:hidden">
               <SlidersHorizontal className="size-4" />

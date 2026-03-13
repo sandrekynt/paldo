@@ -122,8 +122,9 @@ export function InventoryView({
             <AddProductSheet
               isMobile={isMobile}
               open={addProductOpen}
+              triggerId="inventory-add-product-trigger"
               trigger={
-                <Button>
+                <Button id="inventory-add-product-button">
                   <PackagePlus className="size-4" />
                   Add product
                 </Button>
@@ -272,6 +273,7 @@ export function InventoryView({
             <div className="relative">
               <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
+                id="inventory-product-search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search product, category, or SKU"
