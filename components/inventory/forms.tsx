@@ -191,7 +191,7 @@ function SearchableOptionSelect({
                     <Button
                       type="button"
                       variant="outline"
-                      size="icon-sm"
+                      size={isMobile ? "sm" : "icon-sm"}
                       onClick={(event) => {
                         event.stopPropagation()
                         closeMenu()
@@ -201,8 +201,9 @@ function SearchableOptionSelect({
                   }
                 >
                   <PencilLine className="size-3.5" />
+                  {isMobile ? "Edit" : null}
                 </TooltipTrigger>
-                <TooltipContent>Edit</TooltipContent>
+                {!isMobile ? <TooltipContent>Edit</TooltipContent> : null}
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger
@@ -210,7 +211,7 @@ function SearchableOptionSelect({
                     <Button
                       type="button"
                       variant="destructive"
-                      size="icon-sm"
+                      size={isMobile ? "sm" : "icon-sm"}
                       onClick={(event) => {
                         event.stopPropagation()
                         closeMenu()
@@ -220,8 +221,9 @@ function SearchableOptionSelect({
                   }
                 >
                   <Trash2 className="size-3.5" />
+                  {isMobile ? "Delete" : null}
                 </TooltipTrigger>
-                <TooltipContent>Delete</TooltipContent>
+                {!isMobile ? <TooltipContent>Delete</TooltipContent> : null}
               </Tooltip>
             </div>
           </div>
