@@ -41,6 +41,9 @@ type OptionDialogState = {
   value: string
 }
 
+const archiveButtonClassName =
+  "border-transparent bg-amber-100 text-amber-900 hover:bg-amber-200 focus-visible:border-amber-400 focus-visible:ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/50 dark:focus-visible:border-amber-600 dark:focus-visible:ring-amber-900/40"
+
 function getSheetClassName(
   isMobile: boolean,
   desktopClassName = "rounded-none"
@@ -119,9 +122,6 @@ export function AddProductSheet({
           />
         </div>
         <SheetFooter className="flex-row justify-end border-t">
-          <SheetClose render={<Button variant="secondary" />}>
-            Cancel
-          </SheetClose>
           <Button onClick={onSave}>Save new product</Button>
         </SheetFooter>
       </SheetContent>
@@ -268,9 +268,6 @@ export function RestockSheet({
           ) : null}
         </div>
         <SheetFooter className="flex-row justify-end border-t">
-          <SheetClose render={<Button variant="secondary" />}>
-            Cancel
-          </SheetClose>
           <Button onClick={onSave}>Save restock</Button>
         </SheetFooter>
       </SheetContent>
@@ -319,9 +316,6 @@ export function AdjustmentSheet({
           ) : null}
         </div>
         <SheetFooter className="flex-row justify-end border-t">
-          <SheetClose render={<Button variant="secondary" />}>
-            Cancel
-          </SheetClose>
           <Button onClick={onSave}>Save adjustment</Button>
         </SheetFooter>
       </SheetContent>
@@ -395,19 +389,39 @@ export function EditProductSheet({
             />
           ) : null}
         </div>
-        <SheetFooter className="flex-row justify-between border-t">
-          <Button
-            variant={isArchived ? "outline" : "destructive"}
-            onClick={onArchiveClick}
-          >
-            {isArchived ? "Restore" : "Archive"}
-          </Button>
-          <div className="flex items-center gap-2">
-            <SheetClose render={<Button variant="secondary" />}>
-              Cancel
-            </SheetClose>
-            <Button onClick={onSave}>Save changes</Button>
-          </div>
+        <SheetFooter
+          className={cn(
+            "border-t",
+            isMobile
+              ? "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+              : "flex-row justify-between"
+          )}
+        >
+          {isMobile ? (
+            <>
+              <Button className="w-full" onClick={onSave}>
+                Save changes
+              </Button>
+              <Button
+                variant="outline"
+                className={!isArchived ? archiveButtonClassName : undefined}
+                onClick={onArchiveClick}
+              >
+                {isArchived ? "Restore" : "Archive"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                className={!isArchived ? archiveButtonClassName : undefined}
+                onClick={onArchiveClick}
+              >
+                {isArchived ? "Restore" : "Archive"}
+              </Button>
+              <Button onClick={onSave}>Save changes</Button>
+            </>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -452,7 +466,8 @@ export function ArchiveProductSheet({
               Cancel
             </SheetClose>
             <Button
-              variant={isArchived ? "default" : "destructive"}
+              variant={isArchived ? "default" : "outline"}
+              className={!isArchived ? archiveButtonClassName : undefined}
               onClick={onConfirm}
             >
               {isArchived ? "Restore" : "Archive"}

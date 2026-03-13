@@ -131,12 +131,25 @@ export function InventoryProductDetailsContent({
         />
       </div>
 
-      <div className="grid gap-2 md:flex md:justify-end">
-        <Button variant="outline" onClick={onRestock}>
+      <div
+        className={cn(
+          "grid gap-2 md:flex md:justify-end",
+          isMobile && "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start"
+        )}
+      >
+        <Button
+          variant="outline"
+          className={cn(isMobile && "w-full")}
+          onClick={onRestock}
+        >
           <PackagePlus className="size-3.5" />
           Restock
         </Button>
-        <Button variant="outline" onClick={onViewHistory}>
+        <Button
+          variant="outline"
+          className={cn(isMobile && "w-full")}
+          onClick={onViewHistory}
+        >
           <History className="size-3.5" />
           Stock movement history
         </Button>
