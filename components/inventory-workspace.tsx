@@ -63,6 +63,7 @@ type OptionDialogState = {
 
 type ProductFormDraft = {
   name: string
+  sku: string
   category: string
   unit: string
   buyingPrice: string
@@ -93,6 +94,7 @@ type FieldErrors = Partial<Record<string, string>>
 function createEmptyAddProductDraft(): AddProductDraft {
   return {
     name: "",
+    sku: "",
     category: "",
     unit: "",
     buyingPrice: "",
@@ -191,6 +193,7 @@ function getSignedAdjustmentQuantity(draft: AdjustmentDraft) {
 function getDraftFromProduct(product: DemoProduct): ProductFormDraft {
   return {
     name: product.name,
+    sku: product.sku,
     category: product.category,
     unit: product.unit,
     buyingPrice: product.buyingPrice.toFixed(2),
@@ -586,6 +589,12 @@ function ProductForm({
             onChange={(event) => onChange("name", event.target.value)}
           />
         </Field>
+        <Field label="SKU" error={errors.sku}>
+          <Input
+            value={draft.sku}
+            onChange={(event) => onChange("sku", event.target.value)}
+          />
+        </Field>
         <Field label="Category" error={errors.category}>
           <SearchableOptionSelect
             value={draft.category}
@@ -857,7 +866,7 @@ function ProductListRow({
     <tr className="border-t border-border">
       <td className="px-3 py-3">
         <p className="text-xs font-medium">{product.name}</p>
-        <p className="text-[11px] text-muted-foreground">{product.id}</p>
+        <p className="text-[11px] text-muted-foreground">{product.sku}</p>
       </td>
       <td className="px-3 py-3 text-xs text-muted-foreground">
         {product.category}
@@ -1023,8 +1032,8 @@ export function InventoryWorkspace({
     const matchesQuery =
       normalizedQuery.length === 0 ||
       product.name.toLowerCase().includes(normalizedQuery) ||
-      product.category.toLowerCase().includes(normalizedQuery) ||
-      product.id.toLowerCase().includes(normalizedQuery)
+      product.sku.toLowerCase().includes(normalizedQuery) ||
+      product.category.toLowerCase().includes(normalizedQuery)
 
     if (!matchesQuery) {
       return false
@@ -1224,6 +1233,7 @@ export function InventoryWorkspace({
     const errors: FieldErrors = {}
 
     validateRequiredText(errors, "name", draft.name)
+    validateRequiredText(errors, "sku", draft.sku)
     validateRequiredText(errors, "category", draft.category)
     validateRequiredText(errors, "unit", draft.unit)
     validateNonNegativeNumber(errors, "buyingPrice", draft.buyingPrice, "price")
@@ -1307,6 +1317,7 @@ export function InventoryWorkspace({
         id: `prod-${idSuffix}`,
         businessId: business.id,
         name: addDraft.name.trim(),
+        sku: addDraft.sku.trim(),
         category: addDraft.category.trim(),
         unit: addDraft.unit.trim() as InventoryUnit,
         buyingPrice: Number(addDraft.buyingPrice),
@@ -1342,6 +1353,7 @@ export function InventoryWorkspace({
           ? {
               ...product,
               name: editDraft.name.trim(),
+              sku: editDraft.sku.trim(),
               category: editDraft.category.trim(),
               unit: editDraft.unit.trim() as InventoryUnit,
               buyingPrice: Number(editDraft.buyingPrice),
@@ -1697,6 +1709,12 @@ export function InventoryWorkspace({
                               }
                             />
                             <ProductDetailItem
+                              label="SKU"
+                              value={
+                                <p className="text-sm">{viewingProduct.sku}</p>
+                              }
+                            />
+                            <ProductDetailItem
                               label="Category"
                               value={
                                 <p className="text-sm">
@@ -1771,6 +1789,10 @@ export function InventoryWorkspace({
                           <ProductDetailItem
                             label="Status"
                             value={getStatusBadge(viewingProduct)}
+                          />
+                          <ProductDetailItem
+                            label="SKU"
+                            value={<p className="text-sm">{viewingProduct.sku}</p>}
                           />
                           <ProductDetailItem
                             label="Category"
@@ -2245,7 +2267,7 @@ export function InventoryWorkspace({
               <Input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search product, category, or ID"
+                placeholder="Search product, category, or SKU"
                 className="pl-8"
               />
             </div>

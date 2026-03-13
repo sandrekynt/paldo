@@ -29,6 +29,7 @@ export type DemoProduct = {
   id: string
   businessId: string
   name: string
+  sku: string
   category: string
   unit: InventoryUnit
   buyingPrice: number
@@ -65,6 +66,7 @@ export type DemoRestock = {
 }
 
 export type DemoImportField =
+  | "sku"
   | "name"
   | "category"
   | "unit"
@@ -101,6 +103,7 @@ export type DemoInventoryImportSession = {
 export type DemoInventoryDrafts = {
   addProduct: {
     name: string
+    sku: string
     category: string
     unit: InventoryUnit
     buyingPrice: string
@@ -177,6 +180,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "mm-prod-1",
         businessId: "paldo-1",
         name: "Lucky Me Pancit Canton",
+        sku: "KMM-GRO-001",
         category: "Grocery",
         unit: "pack",
         buyingPrice: 12.5,
@@ -191,6 +195,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "mm-prod-2",
         businessId: "paldo-1",
         name: "Summit Drinking Water 500ml",
+        sku: "KMM-BEV-002",
         category: "Beverages",
         unit: "bottle",
         buyingPrice: 8,
@@ -205,6 +210,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "mm-prod-3",
         businessId: "paldo-1",
         name: "Surf Powder Sachet",
+        sku: "KMM-HOU-003",
         category: "Household",
         unit: "piece",
         buyingPrice: 6.2,
@@ -219,6 +225,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "mm-prod-4",
         businessId: "paldo-1",
         name: "555 Sardines Hot",
+        sku: "KMM-GRO-004",
         category: "Grocery",
         unit: "piece",
         buyingPrice: 21,
@@ -233,6 +240,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "mm-prod-5",
         businessId: "paldo-1",
         name: "Well-Milled Rice",
+        sku: "KMM-GRO-005",
         category: "Grocery",
         unit: "kilo",
         buyingPrice: 43,
@@ -247,6 +255,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "mm-prod-6",
         businessId: "paldo-1",
         name: "3-in-1 Coffee Twin Pack",
+        sku: "KMM-GRO-006",
         category: "Grocery",
         unit: "box",
         buyingPrice: 94,
@@ -373,6 +382,12 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
       warningRows: 1,
       mappings: [
         {
+          sourceColumn: "SKU",
+          matchedField: "sku",
+          confidence: "high",
+          sampleValue: "KMM-DRY-007",
+        },
+        {
           sourceColumn: "Product Name",
           matchedField: "name",
           confidence: "high",
@@ -421,6 +436,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "KMM-DRY-007",
             name: "Bear Brand 33g",
             category: "Dairy",
             unit: "piece",
@@ -435,6 +451,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "KMM-BEV-008",
             name: "Coke Mismo",
             category: "Beverages",
             unit: "bottle",
@@ -449,6 +466,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "warning",
           issue: "Unit 'can' needs manual review before import.",
           values: {
+            sku: "KMM-GRO-009",
             name: "Argentina Corned Beef",
             category: "Grocery",
             unit: "other",
@@ -463,6 +481,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "KMM-HOU-010",
             name: "Joy Dishwashing 250ml",
             category: "Household",
             unit: "bottle",
@@ -477,6 +496,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
     drafts: {
       addProduct: {
         name: "Zonrox Bleach 500ml",
+        sku: "KMM-HOU-011",
         category: "Household",
         unit: "bottle",
         buyingPrice: "28.00",
@@ -505,6 +525,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "wr-prod-1",
         businessId: "paldo-2",
         name: "Purified Water 5-Gallon Refill",
+        sku: "SWR-SVC-001",
         category: "Refill Service",
         unit: "piece",
         buyingPrice: 18,
@@ -519,6 +540,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "wr-prod-2",
         businessId: "paldo-2",
         name: "Alkaline Refill 5-Gallon",
+        sku: "SWR-SVC-002",
         category: "Refill Service",
         unit: "piece",
         buyingPrice: 25,
@@ -533,6 +555,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "wr-prod-3",
         businessId: "paldo-2",
         name: "Sealed Cup 350ml",
+        sku: "SWR-CON-003",
         category: "Containers",
         unit: "bottle",
         buyingPrice: 4.5,
@@ -547,6 +570,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "wr-prod-4",
         businessId: "paldo-2",
         name: "Blue Jug Deposit",
+        sku: "SWR-CON-004",
         category: "Containers",
         unit: "piece",
         buyingPrice: 120,
@@ -561,6 +585,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "wr-prod-5",
         businessId: "paldo-2",
         name: "Shrink Cap Roll",
+        sku: "SWR-CNS-005",
         category: "Consumables",
         unit: "pack",
         buyingPrice: 65,
@@ -575,6 +600,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "wr-prod-6",
         businessId: "paldo-2",
         name: "UV Lamp Replacement",
+        sku: "SWR-EQP-006",
         category: "Equipment",
         unit: "other",
         buyingPrice: 850,
@@ -701,6 +727,12 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
       warningRows: 0,
       mappings: [
         {
+          sourceColumn: "sku_code",
+          matchedField: "sku",
+          confidence: "high",
+          sampleValue: "SWR-CON-007",
+        },
+        {
           sourceColumn: "service_name",
           matchedField: "name",
           confidence: "high",
@@ -749,6 +781,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "SWR-CON-007",
             name: "Round Bottle 1L",
             category: "Containers",
             unit: "bottle",
@@ -763,6 +796,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "SWR-CNS-008",
             name: "Water Faucet Spare",
             category: "Consumables",
             unit: "piece",
@@ -777,6 +811,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "SWR-CON-009",
             name: "Slim Cup 250ml",
             category: "Containers",
             unit: "bottle",
@@ -791,6 +826,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "SWR-CNS-010",
             name: "Bottle Seal Roll",
             category: "Consumables",
             unit: "pack",
@@ -805,6 +841,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
     drafts: {
       addProduct: {
         name: "Jug Cap Set",
+        sku: "SWR-CNS-011",
         category: "Consumables",
         unit: "pack",
         buyingPrice: "42.00",
@@ -833,6 +870,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "vt-prod-1",
         businessId: "paldo-3",
         name: "Portland Cement 40kg",
+        sku: "VT-CON-001",
         category: "Construction",
         unit: "sack",
         buyingPrice: 215,
@@ -847,6 +885,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "vt-prod-2",
         businessId: "paldo-3",
         name: "GI Tie Wire",
+        sku: "VT-CON-002",
         category: "Construction",
         unit: "kilo",
         buyingPrice: 58,
@@ -861,6 +900,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "vt-prod-3",
         businessId: "paldo-3",
         name: "PVC Elbow 1/2",
+        sku: "VT-PLB-003",
         category: "Plumbing",
         unit: "box",
         buyingPrice: 165,
@@ -875,6 +915,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "vt-prod-4",
         businessId: "paldo-3",
         name: "Roofing Screw",
+        sku: "VT-FST-004",
         category: "Fasteners",
         unit: "dozen",
         buyingPrice: 42,
@@ -889,6 +930,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "vt-prod-5",
         businessId: "paldo-3",
         name: "Electrical Tape Black",
+        sku: "VT-ELC-005",
         category: "Electrical",
         unit: "pack",
         buyingPrice: 96,
@@ -903,6 +945,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "vt-prod-6",
         businessId: "paldo-3",
         name: "Rebar Cut Length",
+        sku: "VT-CON-006",
         category: "Construction",
         unit: "piece",
         buyingPrice: 145,
@@ -1029,6 +1072,12 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
       warningRows: 1,
       mappings: [
         {
+          sourceColumn: "SKU Code",
+          matchedField: "sku",
+          confidence: "high",
+          sampleValue: "VT-PLB-007",
+        },
+        {
           sourceColumn: "Item Description",
           matchedField: "name",
           confidence: "high",
@@ -1077,6 +1126,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "VT-PLB-007",
             name: "1/2 PVC Tee",
             category: "Plumbing",
             unit: "box",
@@ -1091,6 +1141,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "VT-FST-008",
             name: "Common Nail 2in",
             category: "Fasteners",
             unit: "box",
@@ -1105,6 +1156,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "warning",
           issue: "Selling Unit 'roll' needs conversion to an allowed unit.",
           values: {
+            sku: "VT-ELC-009",
             name: "Electrical Wire THHN",
             category: "Electrical",
             unit: "other",
@@ -1119,6 +1171,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "VT-PLB-010",
             name: "Flexible Hose",
             category: "Plumbing",
             unit: "piece",
@@ -1133,6 +1186,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
           status: "ready",
           issue: null,
           values: {
+            sku: "VT-ELC-011",
             name: "Masking Tape",
             category: "Electrical",
             unit: "pack",
@@ -1147,6 +1201,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
     drafts: {
       addProduct: {
         name: "Tile Adhesive 25kg",
+        sku: "VT-CON-012",
         category: "Construction",
         unit: "sack",
         buyingPrice: "178.00",
@@ -1169,6 +1224,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
 }
 
 export const productImportTemplateColumns: DemoImportField[] = [
+  "sku",
   "name",
   "category",
   "unit",
