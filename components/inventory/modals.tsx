@@ -41,9 +41,6 @@ type OptionDialogState = {
   value: string
 }
 
-const archiveButtonClassName =
-  "border-transparent bg-amber-100 text-amber-900 hover:bg-amber-200 focus-visible:border-amber-400 focus-visible:ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/50 dark:focus-visible:border-amber-600 dark:focus-visible:ring-amber-900/40"
-
 function getSheetClassName(
   isMobile: boolean,
   desktopClassName = "rounded-none"
@@ -393,30 +390,22 @@ export function EditProductSheet({
           className={cn(
             "border-t",
             isMobile
-              ? "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+              ? "grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-2"
               : "flex-row justify-between"
           )}
         >
           {isMobile ? (
             <>
+              <Button variant="outline" onClick={onArchiveClick}>
+                {isArchived ? "Restore" : "Archive"}
+              </Button>
               <Button className="w-full" onClick={onSave}>
                 Save changes
-              </Button>
-              <Button
-                variant="outline"
-                className={!isArchived ? archiveButtonClassName : undefined}
-                onClick={onArchiveClick}
-              >
-                {isArchived ? "Restore" : "Archive"}
               </Button>
             </>
           ) : (
             <>
-              <Button
-                variant="outline"
-                className={!isArchived ? archiveButtonClassName : undefined}
-                onClick={onArchiveClick}
-              >
+              <Button variant="outline" onClick={onArchiveClick}>
                 {isArchived ? "Restore" : "Archive"}
               </Button>
               <Button onClick={onSave}>Save changes</Button>
@@ -465,11 +454,7 @@ export function ArchiveProductSheet({
             <SheetClose render={<Button variant="secondary" />}>
               Cancel
             </SheetClose>
-            <Button
-              variant={isArchived ? "default" : "outline"}
-              className={!isArchived ? archiveButtonClassName : undefined}
-              onClick={onConfirm}
-            >
+            <Button variant={isArchived ? "default" : "outline"} onClick={onConfirm}>
               {isArchived ? "Restore" : "Archive"}
             </Button>
           </div>
