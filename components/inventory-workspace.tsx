@@ -53,7 +53,7 @@ type InventoryWorkspaceProps = {
 }
 
 type ProductStatus = "out" | "low" | "healthy" | "archived"
-type OptionField = "category" | "unit" | "supplier"
+type OptionField = "category" | "unit"
 type OptionDialogState = {
   action: "edit" | "delete"
   field: OptionField
@@ -76,7 +76,6 @@ type AddProductDraft = ProductFormDraft & {
 type RestockDraft = {
   quantityAdded: string
   costPerUnit: string
-  supplierName: string
   notes: string
 }
 
@@ -101,7 +100,6 @@ function createEmptyRestockDraft(): RestockDraft {
   return {
     quantityAdded: "",
     costPerUnit: "",
-    supplierName: "",
     notes: "",
   }
 }
@@ -571,18 +569,10 @@ function ProductForm({
 
 function RestockForm({
   draft,
-  supplierOptions,
   onChange,
-  onSupplierOptionsChange,
-  onRequestSupplierEdit,
-  onRequestSupplierDelete,
 }: {
   draft: RestockDraft
-  supplierOptions: string[]
   onChange: (field: keyof RestockDraft, value: string) => void
-  onSupplierOptionsChange: (values: string[]) => void
-  onRequestSupplierEdit: (value: string) => void
-  onRequestSupplierDelete: (value: string) => void
 }) {
   return (
     <div className="grid gap-4">
@@ -597,17 +587,6 @@ function RestockForm({
           <Input
             value={draft.costPerUnit}
             onChange={(event) => onChange("costPerUnit", event.target.value)}
-          />
-        </Field>
-        <Field label="Supplier" hint="Required">
-          <SearchableOptionSelect
-            value={draft.supplierName}
-            options={supplierOptions}
-            placeholder="Select supplier"
-            onChange={(value) => onChange("supplierName", value)}
-            onOptionsChange={onSupplierOptionsChange}
-            onRequestEdit={onRequestSupplierEdit}
-            onRequestDelete={onRequestSupplierDelete}
           />
         </Field>
         <Field label="Notes">
@@ -783,16 +762,6 @@ export function InventoryWorkspace({
   const [stockMovements, setStockMovements] = React.useState<DemoStockMovement[]>(
     inventory.stockMovements
   )
-  const [supplierOptions, setSupplierOptions] = React.useState<string[]>(
-    Array.from(
-      new Set(
-        inventory.restocks
-          .map((restock) => restock.supplierName)
-          .concat(inventory.drafts.restock.supplierName)
-          .filter((value) => value.trim().length > 0)
-      )
-    )
-  )
   const [categoryOptions, setCategoryOptions] = React.useState<string[]>(
     inventory.suggestedCategories
   )
@@ -850,16 +819,6 @@ export function InventoryWorkspace({
     setProducts(inventory.products)
     setRestockEntries(inventory.restocks)
     setStockMovements(inventory.stockMovements)
-    setSupplierOptions(
-      Array.from(
-        new Set(
-          inventory.restocks
-            .map((restock) => restock.supplierName)
-            .concat(inventory.drafts.restock.supplierName)
-            .filter((value) => value.trim().length > 0)
-        )
-      )
-    )
     setCategoryOptions(inventory.suggestedCategories)
     setUnitOptions(Array.from(inventoryUnitOptions))
     setOptionDialog(null)
@@ -1001,16 +960,16 @@ export function InventoryWorkspace({
     }
 
     const quantityAdded = Number(restockDraft.quantityAdded)
-    const costPerUnit = Number(restockDraft.costPerUnit)
-    const supplierName = restockDraft.supplierName.trim()
+    const costPerUnitValue = restockDraft.costPerUnit.trim()
+    const costPerUnit =
+      costPerUnitValue.length === 0 ? 0 : Number(costPerUnitValue)
     const notes = restockDraft.notes.trim()
 
     if (
       !Number.isFinite(quantityAdded) ||
       quantityAdded <= 0 ||
       !Number.isFinite(costPerUnit) ||
-      costPerUnit < 0 ||
-      supplierName.length === 0
+      costPerUnit < 0
     ) {
       return
     }
@@ -1042,10 +1001,7 @@ export function InventoryWorkspace({
         stockBefore,
         stockAfter,
         referenceId: `restock-${idSuffix}`,
-        notes:
-          notes.length > 0
-            ? notes
-            : `Restocked from ${supplierName}.`,
+        notes: notes.length > 0 ? notes : "Restocked inventory.",
         createdAt,
       },
       ...current,
@@ -1059,7 +1015,6 @@ export function InventoryWorkspace({
         quantityAdded,
         costPerUnit,
         totalCost: quantityAdded * costPerUnit,
-        supplierName,
         notes,
         createdAt,
       },
@@ -1154,11 +1109,6 @@ export function InventoryWorkspace({
       return
     }
 
-    if (field === "supplier") {
-      setSupplierOptions(values)
-      return
-    }
-
     setUnitOptions(values)
   }
 
@@ -1170,11 +1120,6 @@ export function InventoryWorkspace({
     setAddDraft((current) =>
       field in current && current[field as keyof AddProductDraft] === previousValue
         ? { ...current, [field]: nextValue }
-        : current
-    )
-    setRestockDraft((current) =>
-      field === "supplier" && current.supplierName === previousValue
-        ? { ...current, supplierName: nextValue }
         : current
     )
     setEditDraft((current) =>
@@ -1248,7 +1193,7 @@ export function InventoryWorkspace({
               <SheetContent
                 side={isMobile ? "bottom" : "center"}
                 className={cn(
-                  "rounded-none",
+                  "rounded-none data-[side=center]:max-w-3xl",
                   isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
                 )}
               >
@@ -1622,19 +1567,11 @@ export function InventoryWorkspace({
                       <ProductActionSummary product={restockProduct} />
                       <RestockForm
                         draft={restockDraft}
-                        supplierOptions={supplierOptions}
                         onChange={(field, value) =>
                           setRestockDraft((current) => ({
                             ...current,
                             [field]: value,
                           }))
-                        }
-                        onSupplierOptionsChange={setSupplierOptions}
-                        onRequestSupplierEdit={(value) =>
-                          openOptionDialog("supplier", "edit", value)
-                        }
-                        onRequestSupplierDelete={(value) =>
-                          openOptionDialog("supplier", "delete", value)
                         }
                       />
                     </>
@@ -1647,8 +1584,9 @@ export function InventoryWorkspace({
                   <Button
                     disabled={
                       Number(restockDraft.quantityAdded) <= 0 ||
-                      Number(restockDraft.costPerUnit) < 0 ||
-                      restockDraft.supplierName.trim().length === 0
+                      (restockDraft.costPerUnit.trim().length > 0 &&
+                        (!Number.isFinite(Number(restockDraft.costPerUnit)) ||
+                          Number(restockDraft.costPerUnit) < 0))
                     }
                     onClick={applyRestock}
                   >
@@ -1841,9 +1779,7 @@ export function InventoryWorkspace({
                       label={
                         optionDialog.field === "category"
                           ? "Category"
-                          : optionDialog.field === "unit"
-                            ? "Unit"
-                            : "Supplier"
+                          : "Unit"
                       }
                     >
                       <Input

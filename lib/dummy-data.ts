@@ -60,7 +60,6 @@ export type DemoRestock = {
   quantityAdded: number
   costPerUnit: number
   totalCost: number
-  supplierName: string
   notes: string
   createdAt: string
 }
@@ -112,7 +111,6 @@ export type DemoInventoryDrafts = {
   restock: {
     quantityAdded: string
     costPerUnit: string
-    supplierName: string
     notes: string
   }
   adjustment: {
@@ -341,7 +339,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         quantityAdded: 24,
         costPerUnit: 7.8,
         totalCost: 187.2,
-        supplierName: "Northstar Beverage Supply",
         notes: "Two plastic crates received.",
         createdAt: "2026-03-10T15:30:00+08:00",
       },
@@ -352,7 +349,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         quantityAdded: 50,
         costPerUnit: 42,
         totalCost: 2100,
-        supplierName: "Marikina Rice Depot",
         notes: "Restocked after weekend market day.",
         createdAt: "2026-03-08T06:40:00+08:00",
       },
@@ -363,7 +359,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         quantityAdded: 20,
         costPerUnit: 6,
         totalCost: 120,
-        supplierName: "QuickCare Household Trading",
         notes: "Free one pack bundle included.",
         createdAt: "2026-03-05T13:25:00+08:00",
       },
@@ -491,7 +486,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
       restock: {
         quantityAdded: "36",
         costPerUnit: "7.60",
-        supplierName: "Northstar Beverage Supply",
         notes: "Prep for weekend foot traffic and school dismissal rush.",
       },
       adjustment: {
@@ -672,7 +666,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         quantityAdded: 20,
         costPerUnit: 18,
         totalCost: 360,
-        supplierName: "In-house filtration output",
         notes: "Evening batch for next-day deliveries.",
         createdAt: "2026-03-11T18:40:00+08:00",
       },
@@ -683,7 +676,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         quantityAdded: 6,
         costPerUnit: 118,
         totalCost: 708,
-        supplierName: "Aqua Plastics Depot",
         notes: "New jug shells delivered without caps.",
         createdAt: "2026-03-09T10:35:00+08:00",
       },
@@ -694,7 +686,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         quantityAdded: 8,
         costPerUnit: 62,
         totalCost: 496,
-        supplierName: "SealPro Packaging",
         notes: "One pack reserved for kiosk unit.",
         createdAt: "2026-03-06T15:45:00+08:00",
       },
@@ -822,7 +813,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
       restock: {
         quantityAdded: "15",
         costPerUnit: "17.50",
-        supplierName: "In-house filtration output",
         notes: "Prepare extra refill capacity before Saturday village rounds.",
       },
       adjustment: {
@@ -1003,7 +993,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         quantityAdded: 15,
         costPerUnit: 56,
         totalCost: 840,
-        supplierName: "Rizal Steel Hub",
         notes: "Converted from one warehouse coil.",
         createdAt: "2026-03-09T14:25:00+08:00",
       },
@@ -1014,7 +1003,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         quantityAdded: 40,
         costPerUnit: 212,
         totalCost: 8480,
-        supplierName: "Metro Build Depot",
         notes: "Priority cement delivery before Monday projects.",
         createdAt: "2026-03-08T07:35:00+08:00",
       },
@@ -1025,7 +1013,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         quantityAdded: 12,
         costPerUnit: 40,
         totalCost: 480,
-        supplierName: "FixPro Fasteners",
         notes: "Dozen-packed box replenishment.",
         createdAt: "2026-03-05T10:50:00+08:00",
       },
@@ -1167,7 +1154,6 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
       restock: {
         quantityAdded: "20",
         costPerUnit: "55.50",
-        supplierName: "Rizal Steel Hub",
         notes: "Reserve incoming kilos for two contractor accounts on Friday pickup.",
       },
       adjustment: {
