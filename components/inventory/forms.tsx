@@ -266,7 +266,7 @@ function SearchableOptionSelect({
           <SheetContent
             side="bottom"
             overlayClassName="z-70 bg-black/15 supports-backdrop-filter:backdrop-blur-sm"
-            className="z-80 max-h-[85svh] gap-0 border-t"
+            className="z-80 max-h-[80dvh] gap-0 overflow-hidden border-t"
           >
             <SheetHeader className="border-b">
               <SheetTitle>{placeholder}</SheetTitle>

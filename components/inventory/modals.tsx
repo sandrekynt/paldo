@@ -45,7 +45,8 @@ function getSheetClassName(
 ) {
   return cn(
     desktopClassName,
-    isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
+    "max-h-[80dvh] overflow-hidden",
+    isMobile && "gap-0 border-t"
   )
 }
 
@@ -97,7 +98,7 @@ export function AddProductSheet({
         <SheetHeader className="border-b">
           <SheetTitle>Add product</SheetTitle>
         </SheetHeader>
-        <div className="p-4">
+        <div className="overflow-y-auto p-4">
           <ProductForm
             mode="add"
             draft={draft}
@@ -172,9 +173,6 @@ export function ViewProductSheet({
             />
           ) : null}
         </div>
-        <SheetFooter className="justify-end border-t">
-          <SheetClose render={<Button variant="secondary" />}>Close</SheetClose>
-        </SheetFooter>
       </SheetContent>
     </Sheet>
   )
@@ -211,7 +209,7 @@ export function RestockSheet({
         <SheetHeader className="border-b">
           <SheetTitle>Restock</SheetTitle>
         </SheetHeader>
-        <div className="grid gap-4 p-4">
+        <div className="grid gap-4 overflow-y-auto p-4">
           {product ? (
             <>
               <ProductActionSummary product={product} />
@@ -333,7 +331,7 @@ export function EditProductSheet({
         <SheetHeader className="border-b">
           <SheetTitle>Edit product</SheetTitle>
         </SheetHeader>
-        <div className="p-4">
+        <div className="overflow-y-auto p-4">
           {product && draft ? (
             <ProductForm
               mode="edit"
@@ -396,7 +394,7 @@ export function ArchiveProductSheet({
             {isArchived ? "Restore product" : "Archive product"}
           </SheetTitle>
         </SheetHeader>
-        <div className="grid gap-4 p-4">
+        <div className="grid gap-4 overflow-y-auto p-4">
           <p className="text-xs text-muted-foreground">
             {isArchived ? "Restore" : "Archive"}{" "}
             <span className="font-medium text-foreground">{productName}</span>?
@@ -450,7 +448,7 @@ export function OptionDialogSheet({
             {dialog?.action === "edit" ? "Edit" : "Delete"} {dialog?.field}
           </SheetTitle>
         </SheetHeader>
-        <div className="grid gap-4 p-4">
+        <div className="grid gap-4 overflow-y-auto p-4">
           {dialog?.action === "edit" ? (
             <label className="grid gap-2 text-xs">
               <div className="flex items-center justify-between gap-3">
