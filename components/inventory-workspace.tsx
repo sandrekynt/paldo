@@ -1044,6 +1044,14 @@ export function InventoryWorkspace({
     1,
     Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE)
   )
+  const activeProducts = products.filter((product) => product.isActive)
+  const activeProductsCount = activeProducts.length
+  const lowStockCount = activeProducts.filter(
+    (product) => getProductStatus(product) === "low"
+  ).length
+  const outOfStockCount = activeProducts.filter(
+    (product) => getProductStatus(product) === "out"
+  ).length
   const currentPage = Math.min(page, totalPages)
   const pageStart = (currentPage - 1) * PRODUCTS_PER_PAGE
   const paginatedProducts = filteredProducts.slice(
@@ -1584,7 +1592,16 @@ export function InventoryWorkspace({
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <CardTitle>Product list</CardTitle>
+            <div className="grid gap-1">
+              <CardTitle>Product list</CardTitle>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>All stock: {activeProductsCount}</span>
+                <span>&bull;</span>
+                <span>Low stock: {lowStockCount}</span>
+                <span>&bull;</span>
+                <span>No stock: {outOfStockCount}</span>
+              </div>
+            </div>
             <Sheet
               open={addProductOpen}
               onOpenChange={handleAddProductOpenChange}
