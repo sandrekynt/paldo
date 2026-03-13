@@ -35,6 +35,9 @@ export function useInventoryModalState() {
   const [viewingProductId, setViewingProductId] = React.useState<string | null>(
     null
   )
+  const [stockHistoryProductId, setStockHistoryProductId] = React.useState<
+    string | null
+  >(null)
   const [editDraft, setEditDraft] = React.useState<ProductFormDraft | null>(
     null
   )
@@ -62,6 +65,10 @@ export function useInventoryModalState() {
 
   function closeViewModal() {
     setViewingProductId(null)
+  }
+
+  function closeStockHistoryModal() {
+    setStockHistoryProductId(null)
   }
 
   function closeRestockModal() {
@@ -97,6 +104,10 @@ export function useInventoryModalState() {
 
   function openViewModal(product: DemoProduct) {
     setViewingProductId(product.id)
+  }
+
+  function openStockHistoryModal(productId: string) {
+    setStockHistoryProductId(productId)
   }
 
   function openEditModal(product: DemoProduct) {
@@ -144,6 +155,7 @@ export function useInventoryModalState() {
     closeEditModal,
     closeOptionDialog,
     closeRestockModal,
+    closeStockHistoryModal,
     closeViewModal,
     editDraft,
     editErrors,
@@ -153,6 +165,7 @@ export function useInventoryModalState() {
     openEditModal,
     openOptionDialog,
     openRestockModal,
+    openStockHistoryModal,
     openViewModal,
     optionDialog,
     optionDialogError,
@@ -177,7 +190,9 @@ export function useInventoryModalState() {
     setRestockDraft,
     setRestockErrors,
     setRestockProductId,
+    setStockHistoryProductId,
     setViewingProductId,
+    stockHistoryProductId,
     viewingProductId,
   }
 }

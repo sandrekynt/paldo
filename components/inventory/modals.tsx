@@ -10,6 +10,7 @@ import {
 import {
   InventoryProductDetailsContent,
   ProductActionSummary,
+  StockMovementHistoryContent,
 } from "@/components/inventory/product-details"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +18,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -130,22 +132,22 @@ export function ViewProductSheet({
   open,
   product,
   productKey,
-  movements,
   currency,
   scrollRef,
   onOpenChange,
   onRestock,
+  onViewHistory,
   onAdjustment,
 }: {
   isMobile: boolean
   open: boolean
   product: DemoProduct | null
   productKey: string
-  movements: DemoStockMovement[]
   currency: string
   scrollRef: React.RefObject<HTMLDivElement | null>
   onOpenChange: (open: boolean) => void
   onRestock: () => void
+  onViewHistory: () => void
   onAdjustment: () => void
 }) {
   return (
@@ -165,13 +167,55 @@ export function ViewProductSheet({
           {product ? (
             <InventoryProductDetailsContent
               product={product}
-              movements={movements}
               isMobile={isMobile}
               currency={currency}
               onRestock={onRestock}
+              onViewHistory={onViewHistory}
               onAdjustment={onAdjustment}
             />
           ) : null}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+export function StockMovementHistorySheet({
+  isMobile,
+  open,
+  product,
+  movements,
+  onOpenChange,
+}: {
+  isMobile: boolean
+  open: boolean
+  product: Pick<DemoProduct, "name" | "currentStock" | "unitName"> | null
+  movements: DemoStockMovement[]
+  onOpenChange: (open: boolean) => void
+}) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side={isMobile ? "bottom" : "center"}
+        overlayClassName="z-70 bg-black/15 supports-backdrop-filter:backdrop-blur-sm"
+        className={getSheetClassName(
+          isMobile,
+          "z-80 rounded-none data-[side=center]:max-w-3xl"
+        )}
+      >
+        <SheetHeader className="border-b">
+          <SheetTitle>Stock movement history</SheetTitle>
+          {product ? (
+            <SheetDescription>
+              {product.name} · {product.currentStock} {product.unitName}
+            </SheetDescription>
+          ) : null}
+        </SheetHeader>
+        <div className="overflow-y-auto p-4">
+          <StockMovementHistoryContent
+            movements={movements}
+            isMobile={isMobile}
+          />
         </div>
       </SheetContent>
     </Sheet>
@@ -458,7 +502,9 @@ export function OptionDialogSheet({
               </div>
               <Input
                 value={value}
-                onChange={(event) => onValueChange(event.target.value)}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                  onValueChange(event.target.value)
+                }
               />
             </label>
           ) : (

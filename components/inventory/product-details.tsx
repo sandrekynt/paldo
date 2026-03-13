@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
+import { Ellipsis, History, PackagePlus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { DemoProduct, DemoStockMovement } from "@/lib/dummy-data"
@@ -56,19 +58,21 @@ export function ProductActionSummary({
 
 export function InventoryProductDetailsContent({
   product,
-  movements,
   isMobile,
   currency,
   onRestock,
+  onViewHistory,
   onAdjustment,
 }: {
   product: DemoProduct
-  movements: DemoStockMovement[]
   isMobile: boolean
   currency: string
   onRestock: () => void
+  onViewHistory: () => void
   onAdjustment: () => void
 }) {
+  const [actionsOpen, setActionsOpen] = React.useState(false)
+
   return (
     <>
       {isMobile ? (
@@ -185,85 +189,93 @@ export function InventoryProductDetailsContent({
 
       <div className="grid gap-2 md:flex md:justify-end">
         <Button variant="outline" onClick={onRestock}>
+          <PackagePlus className="size-3.5" />
           Restock
         </Button>
-        <Button variant="outline" onClick={onAdjustment}>
-          Manual adjustment
+        <Button variant="outline" onClick={onViewHistory}>
+          <History className="size-3.5" />
+          Stock movement history
         </Button>
+        <PopoverPrimitive.Root
+          modal={false}
+          open={actionsOpen}
+          onOpenChange={setActionsOpen}
+        >
+          <PopoverPrimitive.Trigger
+            render={
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={`More actions for ${product.name}`}
+              />
+            }
+          >
+            <Ellipsis className="size-3.5" />
+          </PopoverPrimitive.Trigger>
+          <PopoverPrimitive.Portal>
+            <PopoverPrimitive.Positioner
+              side="bottom"
+              align="end"
+              sideOffset={8}
+              collisionPadding={8}
+              className="z-70"
+            >
+              <PopoverPrimitive.Popup className="min-w-44 border border-border bg-popover p-1 shadow-sm outline-none">
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center justify-start px-2 py-2 text-left text-xs hover:bg-muted"
+                  onClick={() => {
+                    setActionsOpen(false)
+                    onAdjustment()
+                  }}
+                >
+                  Manual adjustment
+                </button>
+              </PopoverPrimitive.Popup>
+            </PopoverPrimitive.Positioner>
+          </PopoverPrimitive.Portal>
+        </PopoverPrimitive.Root>
       </div>
+    </>
+  )
+}
 
-      <div className="grid gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-medium">Stock movement history</p>
-          <p className="text-xs text-muted-foreground">
-            {movements.length} records
-          </p>
-        </div>
-        {movements.length > 0 ? (
-          <div className="grid gap-2">
-            {movements.map((movement) =>
-              isMobile ? (
-                <div
-                  key={movement.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border border-border p-3"
-                >
-                  <div className="grid gap-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xs font-medium">
-                        {formatMovementType(movement.type)}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {formatDateTime(movement.createdAt)}
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {movement.notes}
+export function StockMovementHistoryContent({
+  movements,
+  isMobile,
+}: {
+  movements: DemoStockMovement[]
+  isMobile: boolean
+}) {
+  return (
+    <div className="grid gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium">Stock movement history</p>
+        <p className="text-xs text-muted-foreground">{movements.length} records</p>
+      </div>
+      {movements.length > 0 ? (
+        <div className="grid gap-2">
+          {movements.map((movement) =>
+            isMobile ? (
+              <div
+                key={movement.id}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border border-border p-3"
+              >
+                <div className="grid gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-medium">
+                      {formatMovementType(movement.type)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {formatDateTime(movement.createdAt)}
                     </p>
                   </div>
-                  <div className="grid gap-3 text-right text-xs">
-                    <div className="grid gap-1">
-                      <p className="text-[11px] text-muted-foreground uppercase">
-                        Change
-                      </p>
-                      <p
-                        className={cn(
-                          "font-medium",
-                          movement.quantityChange > 0 && "text-green-700",
-                          movement.quantityChange < 0 && "text-red-700"
-                        )}
-                      >
-                        {formatQuantityChange(movement.quantityChange)}
-                      </p>
-                    </div>
-                    <div className="grid gap-1">
-                      <p className="text-[11px] text-muted-foreground uppercase">
-                        Stock
-                      </p>
-                      <p className="font-medium">
-                        {movement.stockBefore} to {movement.stockAfter}
-                      </p>
-                    </div>
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {movement.notes}
+                  </p>
                 </div>
-              ) : (
-                <div
-                  key={movement.id}
-                  className="grid gap-3 border border-border p-3 md:grid-cols-[1fr_auto_auto]"
-                >
+                <div className="grid gap-3 text-right text-xs">
                   <div className="grid gap-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xs font-medium">
-                        {formatMovementType(movement.type)}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {formatDateTime(movement.createdAt)}
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {movement.notes}
-                    </p>
-                  </div>
-                  <div className="grid gap-1 text-xs">
                     <p className="text-[11px] text-muted-foreground uppercase">
                       Change
                     </p>
@@ -277,7 +289,7 @@ export function InventoryProductDetailsContent({
                       {formatQuantityChange(movement.quantityChange)}
                     </p>
                   </div>
-                  <div className="grid gap-1 text-xs">
+                  <div className="grid gap-1">
                     <p className="text-[11px] text-muted-foreground uppercase">
                       Stock
                     </p>
@@ -286,15 +298,56 @@ export function InventoryProductDetailsContent({
                     </p>
                   </div>
                 </div>
-              )
-            )}
-          </div>
-        ) : (
-          <div className="border border-border p-4 text-xs text-muted-foreground">
-            No stock movement history for this product yet.
-          </div>
-        )}
-      </div>
-    </>
+              </div>
+            ) : (
+              <div
+                key={movement.id}
+                className="grid gap-3 border border-border p-3 md:grid-cols-[1fr_auto_auto]"
+              >
+                <div className="grid gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-medium">
+                      {formatMovementType(movement.type)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {formatDateTime(movement.createdAt)}
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {movement.notes}
+                  </p>
+                </div>
+                <div className="grid gap-1 text-xs">
+                  <p className="text-[11px] text-muted-foreground uppercase">
+                    Change
+                  </p>
+                  <p
+                    className={cn(
+                      "font-medium",
+                      movement.quantityChange > 0 && "text-green-700",
+                      movement.quantityChange < 0 && "text-red-700"
+                    )}
+                  >
+                    {formatQuantityChange(movement.quantityChange)}
+                  </p>
+                </div>
+                <div className="grid gap-1 text-xs">
+                  <p className="text-[11px] text-muted-foreground uppercase">
+                    Stock
+                  </p>
+                  <p className="font-medium">
+                    {movement.stockBefore} to {movement.stockAfter}
+                  </p>
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      ) : (
+        <div className="border border-border p-4 text-xs text-muted-foreground">
+          No stock movement history for this product yet.
+        </div>
+      )}
+    </div>
   )
 }

@@ -10,6 +10,7 @@ import {
   EditProductSheet,
   OptionDialogSheet,
   RestockSheet,
+  StockMovementHistorySheet,
   ViewProductSheet,
 } from "@/components/inventory/modals"
 import {
@@ -54,6 +55,7 @@ export function InventoryView({
     closeEditModal,
     closeOptionDialog,
     closeRestockModal,
+    closeStockHistoryModal,
     closeViewModal,
     confirmArchiveProduct,
     currentPage,
@@ -77,6 +79,7 @@ export function InventoryView({
     openEditModal,
     openOptionDialog,
     openRestockModal,
+    openStockHistoryModal,
     openViewModal,
     optionDialog,
     optionDialogError,
@@ -100,12 +103,13 @@ export function InventoryView({
     setSearchQuery,
     toggleCategoryFilter,
     toggleStatus,
+    stockHistoryMovements,
+    stockHistoryProduct,
     totalPages,
     totalSelectedFilters,
     unitOptions,
     viewingProduct,
     viewingProductId,
-    viewingProductMovements,
     viewSheetScrollRef,
   } = useInventoryView(selectedBusinessId)
 
@@ -151,7 +155,6 @@ export function InventoryView({
               open={viewingProduct !== null}
               product={viewingProduct}
               productKey={viewingProductId ?? "product-details-body"}
-              movements={viewingProductMovements}
               currency={business.currency}
               scrollRef={viewSheetScrollRef}
               onOpenChange={(open) => {
@@ -162,9 +165,23 @@ export function InventoryView({
               onRestock={() =>
                 viewingProduct && openRestockModal(viewingProduct.id)
               }
+              onViewHistory={() =>
+                viewingProduct && openStockHistoryModal(viewingProduct.id)
+              }
               onAdjustment={() =>
                 viewingProduct && openAdjustmentModal(viewingProduct.id)
               }
+            />
+            <StockMovementHistorySheet
+              isMobile={isMobile}
+              open={stockHistoryProduct !== null}
+              product={stockHistoryProduct}
+              movements={stockHistoryMovements}
+              onOpenChange={(open) => {
+                if (!open) {
+                  closeStockHistoryModal()
+                }
+              }}
             />
             <RestockSheet
               isMobile={isMobile}

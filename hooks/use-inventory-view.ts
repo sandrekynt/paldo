@@ -103,6 +103,7 @@ export function useInventoryView(selectedBusinessId: string) {
     closeEditModal,
     closeOptionDialog,
     closeRestockModal,
+    closeStockHistoryModal,
     closeViewModal,
     editDraft,
     editErrors,
@@ -112,6 +113,7 @@ export function useInventoryView(selectedBusinessId: string) {
     openEditModal,
     openOptionDialog,
     openRestockModal,
+    openStockHistoryModal,
     openViewModal,
     optionDialog,
     optionDialogError,
@@ -136,7 +138,9 @@ export function useInventoryView(selectedBusinessId: string) {
     setRestockDraft,
     setRestockErrors,
     setRestockProductId,
+    setStockHistoryProductId,
     setViewingProductId,
+    stockHistoryProductId,
     viewingProductId,
   } = modalState
   const viewSheetScrollRef = React.useRef<HTMLDivElement | null>(null)
@@ -158,6 +162,7 @@ export function useInventoryView(selectedBusinessId: string) {
     setOptionDialogValue("")
     setOptionDialogError("")
     setViewingProductId(null)
+    setStockHistoryProductId(null)
     setEditDraft(null)
     setEditErrors({})
     setEditingProductId(null)
@@ -187,6 +192,7 @@ export function useInventoryView(selectedBusinessId: string) {
     setRestockDraft,
     setRestockErrors,
     setRestockProductId,
+    setStockHistoryProductId,
     setSearchQuery,
     setSelectedCategories,
     setSelectedStatuses,
@@ -221,6 +227,10 @@ export function useInventoryView(selectedBusinessId: string) {
     restockProductId !== null
       ? (products.find((product) => product.id === restockProductId) ?? null)
       : null
+  const stockHistoryProduct =
+    stockHistoryProductId !== null
+      ? (products.find((product) => product.id === stockHistoryProductId) ?? null)
+      : null
   const adjustmentProduct =
     adjustmentProductId !== null
       ? (products.find((product) => product.id === adjustmentProductId) ?? null)
@@ -228,8 +238,8 @@ export function useInventoryView(selectedBusinessId: string) {
   const isEditingArchivedProduct = editingProduct
     ? !editingProduct.isActive
     : false
-  const viewingProductMovements = stockMovements
-    .filter((movement) => movement.productId === viewingProductId)
+  const stockHistoryMovements = stockMovements
+    .filter((movement) => movement.productId === stockHistoryProductId)
     .sort(
       (first, second) =>
         new Date(second.createdAt).getTime() -
@@ -708,7 +718,8 @@ export function useInventoryView(selectedBusinessId: string) {
     unitOptions,
     viewingProduct,
     viewingProductId,
-    viewingProductMovements,
+    stockHistoryProduct,
+    stockHistoryMovements,
     restockProduct,
     restockDraft,
     restockErrors,
@@ -728,9 +739,11 @@ export function useInventoryView(selectedBusinessId: string) {
     openViewModal,
     openEditModal,
     openRestockModal,
+    openStockHistoryModal,
     openAdjustmentModal,
     closeViewModal,
     closeRestockModal,
+    closeStockHistoryModal,
     closeAdjustmentModal,
     closeEditModal,
     handleAddProductOpenChange,
