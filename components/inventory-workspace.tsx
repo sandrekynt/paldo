@@ -97,6 +97,22 @@ function createEmptyAddProductDraft(): AddProductDraft {
   }
 }
 
+function createEmptyRestockDraft(): RestockDraft {
+  return {
+    quantityAdded: "",
+    costPerUnit: "",
+    supplierName: "",
+    notes: "",
+  }
+}
+
+function createEmptyAdjustmentDraft(): AdjustmentDraft {
+  return {
+    quantityChange: "",
+    notes: "",
+  }
+}
+
 const PRODUCTS_PER_PAGE = 5
 const defaultStatuses: ProductStatus[] = []
 const statusOptions: { id: ProductStatus; label: string }[] = [
@@ -649,6 +665,29 @@ function ProductDetailItem({
   )
 }
 
+function ProductActionSummary({
+  product,
+}: {
+  product: Pick<DemoProduct, "name" | "currentStock" | "unit">
+}) {
+  return (
+    <div className="grid gap-4 border border-border p-4 md:grid-cols-2">
+      <ProductDetailItem
+        label="Name"
+        value={<p className="text-sm font-medium">{product.name}</p>}
+      />
+      <ProductDetailItem
+        label="Stock qty"
+        value={
+          <p className="text-sm">
+            {product.currentStock} {product.unit}
+          </p>
+        }
+      />
+    </div>
+  )
+}
+
 function ProductListRow({
   product,
   currency,
@@ -776,12 +815,12 @@ export function InventoryWorkspace({
     null
   )
   const [restockDraft, setRestockDraft] = React.useState<RestockDraft>(
-    inventory.drafts.restock
+    createEmptyRestockDraft()
   )
   const [adjustmentProductId, setAdjustmentProductId] =
     React.useState<string | null>(null)
   const [adjustmentDraft, setAdjustmentDraft] =
-    React.useState<AdjustmentDraft>(inventory.drafts.adjustment)
+    React.useState<AdjustmentDraft>(createEmptyAdjustmentDraft())
   const [deleteProductOpen, setDeleteProductOpen] = React.useState(false)
   const [filtersOpen, setFiltersOpen] = React.useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false)
@@ -829,9 +868,9 @@ export function InventoryWorkspace({
     setEditDraft(null)
     setEditingProductId(null)
     setRestockProductId(null)
-    setRestockDraft(inventory.drafts.restock)
+    setRestockDraft(createEmptyRestockDraft())
     setAdjustmentProductId(null)
-    setAdjustmentDraft(inventory.drafts.adjustment)
+    setAdjustmentDraft(createEmptyAdjustmentDraft())
     setDeleteProductOpen(false)
   }, [inventory])
 
@@ -917,22 +956,22 @@ export function InventoryWorkspace({
 
   function openRestockModal(productId: string) {
     setRestockProductId(productId)
-    setRestockDraft(inventory.drafts.restock)
+    setRestockDraft(createEmptyRestockDraft())
   }
 
   function closeRestockModal() {
     setRestockProductId(null)
-    setRestockDraft(inventory.drafts.restock)
+    setRestockDraft(createEmptyRestockDraft())
   }
 
   function openAdjustmentModal(productId: string) {
     setAdjustmentProductId(productId)
-    setAdjustmentDraft(inventory.drafts.adjustment)
+    setAdjustmentDraft(createEmptyAdjustmentDraft())
   }
 
   function closeAdjustmentModal() {
     setAdjustmentProductId(null)
-    setAdjustmentDraft(inventory.drafts.adjustment)
+    setAdjustmentDraft(createEmptyAdjustmentDraft())
   }
 
   function handleAddProductOpenChange(open: boolean) {
@@ -1580,15 +1619,7 @@ export function InventoryWorkspace({
                 <div className="grid gap-4 p-4">
                   {restockProduct ? (
                     <>
-                      <div className="border border-border p-4">
-                        <p className="text-sm font-medium">
-                          {restockProduct.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Current stock {restockProduct.currentStock}{" "}
-                          {restockProduct.unit}
-                        </p>
-                      </div>
+                      <ProductActionSummary product={restockProduct} />
                       <RestockForm
                         draft={restockDraft}
                         supplierOptions={supplierOptions}
@@ -1648,15 +1679,7 @@ export function InventoryWorkspace({
                 <div className="grid gap-4 p-4">
                   {adjustmentProduct ? (
                     <>
-                      <div className="border border-border p-4">
-                        <p className="text-sm font-medium">
-                          {adjustmentProduct.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Current stock {adjustmentProduct.currentStock}{" "}
-                          {adjustmentProduct.unit}
-                        </p>
-                      </div>
+                      <ProductActionSummary product={adjustmentProduct} />
                       <AdjustmentForm
                         draft={adjustmentDraft}
                         onChange={(field, value) =>
