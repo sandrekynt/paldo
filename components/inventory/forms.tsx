@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
-import { ChevronDown, PencilLine, Trash2 } from "lucide-react"
+import { ChevronDown, Minus, PencilLine, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -340,6 +340,7 @@ function AdjustmentDirectionSelect({
 }) {
   const [open, setOpen] = React.useState(false)
   const selectedDirection = getAdjustmentDirectionMeta(value)
+  const SelectedIcon = value === "add" ? Plus : Minus
 
   return (
     <PopoverPrimitive.Root modal={false} open={open} onOpenChange={setOpen}>
@@ -348,15 +349,12 @@ function AdjustmentDirectionSelect({
           <Button
             type="button"
             variant="outline"
-            className={cn(
-              "h-8 shrink-0 gap-1 px-2",
-              selectedDirection.className
-            )}
+            className="h-8 shrink-0 gap-1 px-2"
             aria-label={selectedDirection.label}
           />
         }
       >
-        <span className="text-sm font-medium">{selectedDirection.symbol}</span>
+        <SelectedIcon className="size-3.5" />
         <ChevronDown className="size-3 text-muted-foreground" />
       </PopoverPrimitive.Trigger>
 
@@ -372,6 +370,7 @@ function AdjustmentDirectionSelect({
             <div className="grid gap-1">
               {(["add", "subtract"] as const).map((direction) => {
                 const option = getAdjustmentDirectionMeta(direction)
+                const OptionIcon = direction === "add" ? Plus : Minus
 
                 return (
                   <Tooltip key={direction}>
@@ -391,11 +390,7 @@ function AdjustmentDirectionSelect({
                         />
                       }
                     >
-                      <span
-                        className={cn("text-sm font-medium", option.className)}
-                      >
-                        {option.symbol}
-                      </span>
+                      <OptionIcon className="size-3.5" />
                     </TooltipTrigger>
                     <TooltipContent>{option.label}</TooltipContent>
                   </Tooltip>

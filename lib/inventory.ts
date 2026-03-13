@@ -107,14 +107,10 @@ export function formatQuantityChange(value: number) {
 export function getAdjustmentDirectionMeta(direction: AdjustmentDirection) {
   return direction === "add"
     ? {
-        symbol: "+",
         label: "Add stock",
-        className: "text-green-700",
       }
     : {
-        symbol: "-",
         label: "Subtract stock",
-        className: "text-red-700",
       }
 }
 
