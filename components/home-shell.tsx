@@ -12,7 +12,7 @@ import {
   Wallet,
 } from "lucide-react"
 
-import { InventoryWorkspace } from "@/components/inventory-workspace"
+import { InventoryView } from "@/components/inventory-view"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -306,7 +306,7 @@ export function HomeShell() {
 
       <main className="min-h-[calc(100svh-8rem)] w-full p-4 pb-24 md:pb-4">
         {selectedModule === "Inventory" ? (
-          <InventoryWorkspace selectedBusinessId={selectedBusinessId} />
+          <InventoryView selectedBusinessId={selectedBusinessId} />
         ) : (
           <ModulePlaceholder label={selectedModule} />
         )}
