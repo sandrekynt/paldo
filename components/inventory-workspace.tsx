@@ -44,6 +44,7 @@ import {
   type DemoProduct,
   type DemoRestock,
   type DemoStockMovement,
+  type InventoryUnit,
 } from "@/lib/dummy-data"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -86,6 +87,8 @@ type AdjustmentDraft = {
   quantityChange: string
   notes: string
 }
+
+type FieldErrors = Partial<Record<string, string>>
 
 function createEmptyAddProductDraft(): AddProductDraft {
   return {
@@ -249,11 +252,13 @@ function getProductStatus(product: DemoProduct): ProductStatus {
 function Field({
   label,
   hint,
+  error,
   className,
   children,
 }: {
   label: string
   hint?: string
+  error?: string
   className?: string
   children: React.ReactNode
 }) {
@@ -264,6 +269,7 @@ function Field({
         {hint ? <span className="text-muted-foreground">{hint}</span> : null}
       </div>
       {children}
+      {error ? <p className="text-[11px] text-red-600">{error}</p> : null}
     </label>
   )
 }
@@ -549,6 +555,7 @@ function ProductForm({
   draft,
   categoryOptions,
   unitOptions,
+  errors,
   onChange,
   onCategoryOptionsChange,
   onUnitOptionsChange,
@@ -561,6 +568,7 @@ function ProductForm({
   draft: ProductFormDraft | AddProductDraft
   categoryOptions: string[]
   unitOptions: string[]
+  errors: FieldErrors
   onChange: (field: string, value: string) => void
   onCategoryOptionsChange: (values: string[]) => void
   onUnitOptionsChange: (values: string[]) => void
@@ -572,13 +580,13 @@ function ProductForm({
   return (
     <div className="grid gap-4">
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Name">
+        <Field label="Name" error={errors.name}>
           <Input
             value={draft.name}
             onChange={(event) => onChange("name", event.target.value)}
           />
         </Field>
-        <Field label="Category">
+        <Field label="Category" error={errors.category}>
           <SearchableOptionSelect
             value={draft.category}
             options={categoryOptions}
@@ -589,7 +597,7 @@ function ProductForm({
             onRequestDelete={onRequestCategoryDelete}
           />
         </Field>
-        <Field label="Unit">
+        <Field label="Unit" error={errors.unit}>
           <SearchableOptionSelect
             value={draft.unit}
             options={unitOptions}
@@ -600,27 +608,30 @@ function ProductForm({
             onRequestDelete={onRequestUnitDelete}
           />
         </Field>
-        <Field label="Buying price">
+        <Field label="Buying price" error={errors.buyingPrice}>
           <Input
             value={draft.buyingPrice}
             onChange={(event) => onChange("buyingPrice", event.target.value)}
           />
         </Field>
-        <Field label="Selling price">
+        <Field label="Selling price" error={errors.sellingPrice}>
           <Input
             value={draft.sellingPrice}
             onChange={(event) => onChange("sellingPrice", event.target.value)}
           />
         </Field>
         {mode === "add" ? (
-          <Field label="Opening stock">
+          <Field label="Opening stock" error={errors.openingStock}>
             <Input
               value={"openingStock" in draft ? draft.openingStock : ""}
               onChange={(event) => onChange("openingStock", event.target.value)}
             />
           </Field>
         ) : null}
-        <Field label="Low stock threshold">
+        <Field
+          label="Low stock threshold"
+          error={errors.lowStockThreshold}
+        >
           <Input
             value={draft.lowStockThreshold}
             onChange={(event) =>
@@ -635,27 +646,34 @@ function ProductForm({
 
 function RestockForm({
   draft,
+  errors,
   onChange,
 }: {
   draft: RestockDraft
+  errors: FieldErrors
   onChange: (field: keyof RestockDraft, value: string) => void
 }) {
   return (
     <div className="grid gap-4">
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Quantity added">
+        <Field label="Quantity added" error={errors.quantityAdded}>
           <Input
             value={draft.quantityAdded}
             onChange={(event) => onChange("quantityAdded", event.target.value)}
           />
         </Field>
-        <Field label="Total cost">
+        <Field label="Total cost" hint="Optional" error={errors.totalCost}>
           <Input
             value={draft.totalCost}
             onChange={(event) => onChange("totalCost", event.target.value)}
           />
         </Field>
-        <Field label="Notes" className="md:col-span-2">
+        <Field
+          label="Notes"
+          hint="Optional"
+          error={errors.notes}
+          className="md:col-span-2"
+        >
           <Input
             value={draft.notes}
             onChange={(event) => onChange("notes", event.target.value)}
@@ -749,15 +767,17 @@ function AdjustmentDirectionSelect({
 
 function AdjustmentForm({
   draft,
+  errors,
   onChange,
 }: {
   draft: AdjustmentDraft
+  errors: FieldErrors
   onChange: (field: keyof AdjustmentDraft, value: string) => void
 }) {
   return (
     <div className="grid gap-4">
       <div className="grid gap-4">
-        <Field label="Quantity change">
+        <Field label="Quantity change" error={errors.quantityChange}>
           <div className="flex gap-2">
             <AdjustmentDirectionSelect
               value={draft.direction}
@@ -771,7 +791,7 @@ function AdjustmentForm({
             />
           </div>
         </Field>
-        <Field label="Reason" hint="Required">
+        <Field label="Reason" error={errors.notes}>
           <Input
             value={draft.notes}
             onChange={(event) => onChange("notes", event.target.value)}
@@ -910,6 +930,7 @@ export function InventoryWorkspace({
   const [addDraft, setAddDraft] = React.useState<AddProductDraft>(
     createEmptyAddProductDraft()
   )
+  const [addErrors, setAddErrors] = React.useState<FieldErrors>({})
   const [products, setProducts] = React.useState<DemoProduct[]>(
     inventory.products
   )
@@ -932,6 +953,7 @@ export function InventoryWorkspace({
   const [editDraft, setEditDraft] = React.useState<ProductFormDraft | null>(
     null
   )
+  const [editErrors, setEditErrors] = React.useState<FieldErrors>({})
   const [editingProductId, setEditingProductId] = React.useState<string | null>(
     null
   )
@@ -941,10 +963,14 @@ export function InventoryWorkspace({
   const [restockDraft, setRestockDraft] = React.useState<RestockDraft>(
     createEmptyRestockDraft()
   )
+  const [restockErrors, setRestockErrors] = React.useState<FieldErrors>({})
   const [adjustmentProductId, setAdjustmentProductId] =
     React.useState<string | null>(null)
   const [adjustmentDraft, setAdjustmentDraft] =
     React.useState<AdjustmentDraft>(createEmptyAdjustmentDraft())
+  const [adjustmentErrors, setAdjustmentErrors] = React.useState<FieldErrors>(
+    {}
+  )
   const [deleteProductOpen, setDeleteProductOpen] = React.useState(false)
   const [filtersOpen, setFiltersOpen] = React.useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false)
@@ -971,6 +997,7 @@ export function InventoryWorkspace({
     setPage(1)
     setAddProductOpen(false)
     setAddDraft(createEmptyAddProductDraft())
+    setAddErrors({})
     setProducts(inventory.products)
     setRestockEntries(inventory.restocks)
     setStockMovements(inventory.stockMovements)
@@ -980,11 +1007,14 @@ export function InventoryWorkspace({
     setOptionDialogValue("")
     setViewingProductId(null)
     setEditDraft(null)
+    setEditErrors({})
     setEditingProductId(null)
     setRestockProductId(null)
     setRestockDraft(createEmptyRestockDraft())
+    setRestockErrors({})
     setAdjustmentProductId(null)
     setAdjustmentDraft(createEmptyAdjustmentDraft())
+    setAdjustmentErrors({})
     setDeleteProductOpen(false)
   }, [inventory])
 
@@ -1062,6 +1092,7 @@ export function InventoryWorkspace({
   function openEditModal(product: DemoProduct) {
     setEditingProductId(product.id)
     setEditDraft(getDraftFromProduct(product))
+    setEditErrors({})
   }
 
   function openViewModal(product: DemoProduct) {
@@ -1071,21 +1102,25 @@ export function InventoryWorkspace({
   function openRestockModal(productId: string) {
     setRestockProductId(productId)
     setRestockDraft(createEmptyRestockDraft())
+    setRestockErrors({})
   }
 
   function closeRestockModal() {
     setRestockProductId(null)
     setRestockDraft(createEmptyRestockDraft())
+    setRestockErrors({})
   }
 
   function openAdjustmentModal(productId: string) {
     setAdjustmentProductId(productId)
     setAdjustmentDraft(createEmptyAdjustmentDraft())
+    setAdjustmentErrors({})
   }
 
   function closeAdjustmentModal() {
     setAdjustmentProductId(null)
     setAdjustmentDraft(createEmptyAdjustmentDraft())
+    setAdjustmentErrors({})
   }
 
   function handleAddProductOpenChange(open: boolean) {
@@ -1093,15 +1128,18 @@ export function InventoryWorkspace({
 
     if (open) {
       setAddDraft(createEmptyAddProductDraft())
+      setAddErrors({})
       return
     }
 
     setAddDraft(createEmptyAddProductDraft())
+    setAddErrors({})
   }
 
   function closeEditModal() {
     setEditingProductId(null)
     setEditDraft(null)
+    setEditErrors({})
     setDeleteProductOpen(false)
   }
 
@@ -1109,8 +1147,215 @@ export function InventoryWorkspace({
     setViewingProductId(null)
   }
 
+  function clearFieldError(field: string, setter: React.Dispatch<React.SetStateAction<FieldErrors>>) {
+    setter((current) => {
+      if (!current[field]) {
+        return current
+      }
+
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }
+
+  function validateRequiredText(
+    errors: FieldErrors,
+    field: string,
+    value: string
+  ) {
+    if (value.trim().length === 0) {
+      errors[field] = "Required"
+    }
+  }
+
+  function validateNonNegativeNumber(
+    errors: FieldErrors,
+    field: string,
+    value: string,
+    label: "amount" | "price" | "quantity"
+  ) {
+    if (value.trim().length === 0) {
+      errors[field] = "Required"
+      return
+    }
+
+    const parsedValue = Number(value)
+
+    if (!Number.isFinite(parsedValue) || parsedValue < 0) {
+      errors[field] =
+        label === "quantity"
+          ? "Enter a valid quantity"
+          : label === "amount"
+            ? "Enter a valid amount"
+            : "Enter a valid price"
+    }
+  }
+
+  function validatePositiveNumber(
+    errors: FieldErrors,
+    field: string,
+    value: string
+  ) {
+    if (value.trim().length === 0) {
+      errors[field] = "Required"
+      return
+    }
+
+    const parsedValue = Number(value)
+
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+      errors[field] = "Enter a quantity greater than 0"
+    }
+  }
+
+  function validateProductDraft(
+    draft: ProductFormDraft | AddProductDraft,
+    mode: "add" | "edit"
+  ) {
+    const errors: FieldErrors = {}
+
+    validateRequiredText(errors, "name", draft.name)
+    validateRequiredText(errors, "category", draft.category)
+    validateRequiredText(errors, "unit", draft.unit)
+    validateNonNegativeNumber(errors, "buyingPrice", draft.buyingPrice, "price")
+    validateNonNegativeNumber(
+      errors,
+      "sellingPrice",
+      draft.sellingPrice,
+      "price"
+    )
+    validateNonNegativeNumber(
+      errors,
+      "lowStockThreshold",
+      draft.lowStockThreshold,
+      "quantity"
+    )
+
+    if (mode === "add" && "openingStock" in draft) {
+      validateNonNegativeNumber(errors, "openingStock", draft.openingStock, "quantity")
+    }
+
+    return errors
+  }
+
+  function validateRestockDraft(draft: RestockDraft) {
+    const errors: FieldErrors = {}
+
+    validatePositiveNumber(errors, "quantityAdded", draft.quantityAdded)
+
+    if (draft.totalCost.trim().length > 0) {
+      const totalCost = Number(draft.totalCost)
+
+      if (!Number.isFinite(totalCost) || totalCost < 0) {
+        errors.totalCost = "Enter a valid amount"
+      }
+    }
+
+    return errors
+  }
+
+  function validateAdjustmentDraft(
+    draft: AdjustmentDraft,
+    product: DemoProduct | null
+  ) {
+    const errors: FieldErrors = {}
+    const rawQuantity = draft.quantityChange.trim()
+
+    if (rawQuantity.length === 0) {
+      errors.quantityChange = "Required"
+    } else {
+      const parsedQuantity = Number(rawQuantity)
+
+      if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+        errors.quantityChange = "Enter a quantity greater than 0"
+      } else if (
+        draft.direction === "subtract" &&
+        product &&
+        product.currentStock - parsedQuantity < 0
+      ) {
+        errors.quantityChange = "Cannot reduce below zero"
+      }
+    }
+
+    validateRequiredText(errors, "notes", draft.notes)
+
+    return errors
+  }
+
+  function saveAddProduct() {
+    const errors = validateProductDraft(addDraft, "add")
+    setAddErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      return
+    }
+
+    const createdAt = new Date().toISOString()
+    const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
+
+    setProducts((current) => [
+      {
+        id: `prod-${idSuffix}`,
+        businessId: business.id,
+        name: addDraft.name.trim(),
+        category: addDraft.category.trim(),
+        unit: addDraft.unit.trim() as InventoryUnit,
+        buyingPrice: Number(addDraft.buyingPrice),
+        sellingPrice: Number(addDraft.sellingPrice),
+        currentStock: Number(addDraft.openingStock),
+        lowStockThreshold: Number(addDraft.lowStockThreshold),
+        isActive: true,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      ...current,
+    ])
+    handleAddProductOpenChange(false)
+  }
+
+  function saveEditProduct() {
+    if (!editingProduct || !editDraft) {
+      return
+    }
+
+    const errors = validateProductDraft(editDraft, "edit")
+    setEditErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      return
+    }
+
+    const updatedAt = new Date().toISOString()
+
+    setProducts((current) =>
+      current.map((product) =>
+        product.id === editingProduct.id
+          ? {
+              ...product,
+              name: editDraft.name.trim(),
+              category: editDraft.category.trim(),
+              unit: editDraft.unit.trim() as InventoryUnit,
+              buyingPrice: Number(editDraft.buyingPrice),
+              sellingPrice: Number(editDraft.sellingPrice),
+              lowStockThreshold: Number(editDraft.lowStockThreshold),
+              updatedAt,
+            }
+          : product
+      )
+    )
+    closeEditModal()
+  }
+
   function applyRestock() {
     if (!restockProduct) {
+      return
+    }
+
+    const errors = validateRestockDraft(restockDraft)
+    setRestockErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
       return
     }
 
@@ -1180,6 +1425,13 @@ export function InventoryWorkspace({
 
   function applyAdjustment() {
     if (!adjustmentProduct) {
+      return
+    }
+
+    const errors = validateAdjustmentDraft(adjustmentDraft, adjustmentProduct)
+    setAdjustmentErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
       return
     }
 
@@ -1361,9 +1613,11 @@ export function InventoryWorkspace({
                     draft={addDraft}
                     categoryOptions={categoryOptions}
                     unitOptions={unitOptions}
-                    onChange={(field, value) =>
+                    errors={addErrors}
+                    onChange={(field, value) => {
                       setAddDraft((current) => ({ ...current, [field]: value }))
-                    }
+                      clearFieldError(field, setAddErrors)
+                    }}
                     onCategoryOptionsChange={setCategoryOptions}
                     onUnitOptionsChange={setUnitOptions}
                     onRequestCategoryEdit={(value) =>
@@ -1384,7 +1638,7 @@ export function InventoryWorkspace({
                   <SheetClose render={<Button variant="secondary" />}>
                     Cancel
                   </SheetClose>
-                  <Button>Save new product</Button>
+                  <Button onClick={saveAddProduct}>Save new product</Button>
                 </SheetFooter>
               </SheetContent>
             </Sheet>
@@ -1722,12 +1976,14 @@ export function InventoryWorkspace({
                       <ProductActionSummary product={restockProduct} />
                       <RestockForm
                         draft={restockDraft}
-                        onChange={(field, value) =>
+                        errors={restockErrors}
+                        onChange={(field, value) => {
                           setRestockDraft((current) => ({
                             ...current,
                             [field]: value,
                           }))
-                        }
+                          clearFieldError(field, setRestockErrors)
+                        }}
                       />
                     </>
                   ) : null}
@@ -1736,15 +1992,7 @@ export function InventoryWorkspace({
                   <SheetClose render={<Button variant="secondary" />}>
                     Cancel
                   </SheetClose>
-                  <Button
-                    disabled={
-                      Number(restockDraft.quantityAdded) <= 0 ||
-                      (restockDraft.totalCost.trim().length > 0 &&
-                        (!Number.isFinite(Number(restockDraft.totalCost)) ||
-                          Number(restockDraft.totalCost) < 0))
-                    }
-                    onClick={applyRestock}
-                  >
+                  <Button onClick={applyRestock}>
                     Save restock
                   </Button>
                 </SheetFooter>
@@ -1775,12 +2023,14 @@ export function InventoryWorkspace({
                       <ProductActionSummary product={adjustmentProduct} />
                       <AdjustmentForm
                         draft={adjustmentDraft}
-                        onChange={(field, value) =>
+                        errors={adjustmentErrors}
+                        onChange={(field, value) => {
                           setAdjustmentDraft((current) => ({
                             ...current,
                             [field]: value,
                           }))
-                        }
+                          clearFieldError(field, setAdjustmentErrors)
+                        }}
                       />
                     </>
                   ) : null}
@@ -1789,21 +2039,7 @@ export function InventoryWorkspace({
                   <SheetClose render={<Button variant="secondary" />}>
                     Cancel
                   </SheetClose>
-                  <Button
-                    disabled={
-                      !Number.isFinite(
-                        getSignedAdjustmentQuantity(adjustmentDraft)
-                      ) ||
-                      getSignedAdjustmentQuantity(adjustmentDraft) === 0 ||
-                      adjustmentDraft.notes.trim().length === 0 ||
-                      (adjustmentProduct
-                        ? adjustmentProduct.currentStock +
-                            getSignedAdjustmentQuantity(adjustmentDraft) <
-                          0
-                        : false)
-                    }
-                    onClick={applyAdjustment}
-                  >
+                  <Button onClick={applyAdjustment}>
                     Save adjustment
                   </Button>
                 </SheetFooter>
@@ -1835,11 +2071,13 @@ export function InventoryWorkspace({
                       draft={editDraft}
                       categoryOptions={categoryOptions}
                       unitOptions={unitOptions}
-                      onChange={(field, value) =>
+                      errors={editErrors}
+                      onChange={(field, value) => {
                         setEditDraft((current) =>
                           current ? { ...current, [field]: value } : current
                         )
-                      }
+                        clearFieldError(field, setEditErrors)
+                      }}
                       onCategoryOptionsChange={setCategoryOptions}
                       onUnitOptionsChange={setUnitOptions}
                       onRequestCategoryEdit={(value) =>
@@ -1868,7 +2106,7 @@ export function InventoryWorkspace({
                     <SheetClose render={<Button variant="secondary" />}>
                       Cancel
                     </SheetClose>
-                    <Button>Save changes</Button>
+                    <Button onClick={saveEditProduct}>Save changes</Button>
                   </div>
                 </SheetFooter>
               </SheetContent>
