@@ -42,6 +42,7 @@ import {
   getInventoryDemo,
   inventoryUnitOptions,
   type DemoProduct,
+  type DemoRestock,
   type DemoStockMovement,
 } from "@/lib/dummy-data"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -52,7 +53,7 @@ type InventoryWorkspaceProps = {
 }
 
 type ProductStatus = "out" | "low" | "healthy" | "archived"
-type OptionField = "category" | "unit"
+type OptionField = "category" | "unit" | "supplier"
 type OptionDialogState = {
   action: "edit" | "delete"
   field: OptionField
@@ -70,6 +71,18 @@ type ProductFormDraft = {
 
 type AddProductDraft = ProductFormDraft & {
   openingStock: string
+}
+
+type RestockDraft = {
+  quantityAdded: string
+  costPerUnit: string
+  supplierName: string
+  notes: string
+}
+
+type AdjustmentDraft = {
+  quantityChange: string
+  notes: string
 }
 
 function createEmptyAddProductDraft(): AddProductDraft {
@@ -540,6 +553,85 @@ function ProductForm({
   )
 }
 
+function RestockForm({
+  draft,
+  supplierOptions,
+  onChange,
+  onSupplierOptionsChange,
+  onRequestSupplierEdit,
+  onRequestSupplierDelete,
+}: {
+  draft: RestockDraft
+  supplierOptions: string[]
+  onChange: (field: keyof RestockDraft, value: string) => void
+  onSupplierOptionsChange: (values: string[]) => void
+  onRequestSupplierEdit: (value: string) => void
+  onRequestSupplierDelete: (value: string) => void
+}) {
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Quantity added">
+          <Input
+            value={draft.quantityAdded}
+            onChange={(event) => onChange("quantityAdded", event.target.value)}
+          />
+        </Field>
+        <Field label="Cost per unit">
+          <Input
+            value={draft.costPerUnit}
+            onChange={(event) => onChange("costPerUnit", event.target.value)}
+          />
+        </Field>
+        <Field label="Supplier" hint="Required">
+          <SearchableOptionSelect
+            value={draft.supplierName}
+            options={supplierOptions}
+            placeholder="Select supplier"
+            onChange={(value) => onChange("supplierName", value)}
+            onOptionsChange={onSupplierOptionsChange}
+            onRequestEdit={onRequestSupplierEdit}
+            onRequestDelete={onRequestSupplierDelete}
+          />
+        </Field>
+        <Field label="Notes">
+          <Input
+            value={draft.notes}
+            onChange={(event) => onChange("notes", event.target.value)}
+          />
+        </Field>
+      </div>
+    </div>
+  )
+}
+
+function AdjustmentForm({
+  draft,
+  onChange,
+}: {
+  draft: AdjustmentDraft
+  onChange: (field: keyof AdjustmentDraft, value: string) => void
+}) {
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-4">
+        <Field label="Quantity change" hint="Use - for deduction">
+          <Input
+            value={draft.quantityChange}
+            onChange={(event) => onChange("quantityChange", event.target.value)}
+          />
+        </Field>
+        <Field label="Reason" hint="Required">
+          <Input
+            value={draft.notes}
+            onChange={(event) => onChange("notes", event.target.value)}
+          />
+        </Field>
+      </div>
+    </div>
+  )
+}
+
 function ProductDetailItem({
   label,
   value,
@@ -648,6 +740,20 @@ export function InventoryWorkspace({
   const [products, setProducts] = React.useState<DemoProduct[]>(
     inventory.products
   )
+  const [, setRestockEntries] = React.useState<DemoRestock[]>(inventory.restocks)
+  const [stockMovements, setStockMovements] = React.useState<DemoStockMovement[]>(
+    inventory.stockMovements
+  )
+  const [supplierOptions, setSupplierOptions] = React.useState<string[]>(
+    Array.from(
+      new Set(
+        inventory.restocks
+          .map((restock) => restock.supplierName)
+          .concat(inventory.drafts.restock.supplierName)
+          .filter((value) => value.trim().length > 0)
+      )
+    )
+  )
   const [categoryOptions, setCategoryOptions] = React.useState<string[]>(
     inventory.suggestedCategories
   )
@@ -666,6 +772,16 @@ export function InventoryWorkspace({
   const [editingProductId, setEditingProductId] = React.useState<string | null>(
     null
   )
+  const [restockProductId, setRestockProductId] = React.useState<string | null>(
+    null
+  )
+  const [restockDraft, setRestockDraft] = React.useState<RestockDraft>(
+    inventory.drafts.restock
+  )
+  const [adjustmentProductId, setAdjustmentProductId] =
+    React.useState<string | null>(null)
+  const [adjustmentDraft, setAdjustmentDraft] =
+    React.useState<AdjustmentDraft>(inventory.drafts.adjustment)
   const [deleteProductOpen, setDeleteProductOpen] = React.useState(false)
   const [filtersOpen, setFiltersOpen] = React.useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = React.useState(false)
@@ -693,6 +809,18 @@ export function InventoryWorkspace({
     setAddProductOpen(false)
     setAddDraft(createEmptyAddProductDraft())
     setProducts(inventory.products)
+    setRestockEntries(inventory.restocks)
+    setStockMovements(inventory.stockMovements)
+    setSupplierOptions(
+      Array.from(
+        new Set(
+          inventory.restocks
+            .map((restock) => restock.supplierName)
+            .concat(inventory.drafts.restock.supplierName)
+            .filter((value) => value.trim().length > 0)
+        )
+      )
+    )
     setCategoryOptions(inventory.suggestedCategories)
     setUnitOptions(Array.from(inventoryUnitOptions))
     setOptionDialog(null)
@@ -700,6 +828,10 @@ export function InventoryWorkspace({
     setViewingProductId(null)
     setEditDraft(null)
     setEditingProductId(null)
+    setRestockProductId(null)
+    setRestockDraft(inventory.drafts.restock)
+    setAdjustmentProductId(null)
+    setAdjustmentDraft(inventory.drafts.adjustment)
     setDeleteProductOpen(false)
   }, [inventory])
 
@@ -743,7 +875,15 @@ export function InventoryWorkspace({
     viewingProductId !== null
       ? (products.find((product) => product.id === viewingProductId) ?? null)
       : null
-  const viewingProductMovements = inventory.stockMovements
+  const restockProduct =
+    restockProductId !== null
+      ? (products.find((product) => product.id === restockProductId) ?? null)
+      : null
+  const adjustmentProduct =
+    adjustmentProductId !== null
+      ? (products.find((product) => product.id === adjustmentProductId) ?? null)
+      : null
+  const viewingProductMovements = stockMovements
     .filter((movement) => movement.productId === viewingProductId)
     .sort(
       (first, second) =>
@@ -775,6 +915,26 @@ export function InventoryWorkspace({
     setViewingProductId(product.id)
   }
 
+  function openRestockModal(productId: string) {
+    setRestockProductId(productId)
+    setRestockDraft(inventory.drafts.restock)
+  }
+
+  function closeRestockModal() {
+    setRestockProductId(null)
+    setRestockDraft(inventory.drafts.restock)
+  }
+
+  function openAdjustmentModal(productId: string) {
+    setAdjustmentProductId(productId)
+    setAdjustmentDraft(inventory.drafts.adjustment)
+  }
+
+  function closeAdjustmentModal() {
+    setAdjustmentProductId(null)
+    setAdjustmentDraft(inventory.drafts.adjustment)
+  }
+
   function handleAddProductOpenChange(open: boolean) {
     setAddProductOpen(open)
 
@@ -794,6 +954,134 @@ export function InventoryWorkspace({
 
   function closeViewModal() {
     setViewingProductId(null)
+  }
+
+  function applyRestock() {
+    if (!restockProduct) {
+      return
+    }
+
+    const quantityAdded = Number(restockDraft.quantityAdded)
+    const costPerUnit = Number(restockDraft.costPerUnit)
+    const supplierName = restockDraft.supplierName.trim()
+    const notes = restockDraft.notes.trim()
+
+    if (
+      !Number.isFinite(quantityAdded) ||
+      quantityAdded <= 0 ||
+      !Number.isFinite(costPerUnit) ||
+      costPerUnit < 0 ||
+      supplierName.length === 0
+    ) {
+      return
+    }
+
+    const createdAt = new Date().toISOString()
+    const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
+    const stockBefore = restockProduct.currentStock
+    const stockAfter = stockBefore + quantityAdded
+    const movementId = `move-${idSuffix}`
+
+    setProducts((current) =>
+      current.map((product) =>
+        product.id === restockProduct.id
+          ? {
+              ...product,
+              currentStock: stockAfter,
+              updatedAt: createdAt,
+            }
+          : product
+      )
+    )
+    setStockMovements((current) => [
+      {
+        id: movementId,
+        productId: restockProduct.id,
+        businessId: business.id,
+        type: "restock",
+        quantityChange: quantityAdded,
+        stockBefore,
+        stockAfter,
+        referenceId: `restock-${idSuffix}`,
+        notes:
+          notes.length > 0
+            ? notes
+            : `Restocked from ${supplierName}.`,
+        createdAt,
+      },
+      ...current,
+    ])
+
+    setRestockEntries((current) => [
+      {
+        id: `restock-${idSuffix}`,
+        productId: restockProduct.id,
+        businessId: business.id,
+        quantityAdded,
+        costPerUnit,
+        totalCost: quantityAdded * costPerUnit,
+        supplierName,
+        notes,
+        createdAt,
+      },
+      ...current,
+    ])
+    closeRestockModal()
+  }
+
+  function applyAdjustment() {
+    if (!adjustmentProduct) {
+      return
+    }
+
+    const quantityChange = Number(adjustmentDraft.quantityChange)
+    const notes = adjustmentDraft.notes.trim()
+
+    if (
+      !Number.isFinite(quantityChange) ||
+      quantityChange === 0 ||
+      notes.length === 0
+    ) {
+      return
+    }
+
+    const stockBefore = adjustmentProduct.currentStock
+    const stockAfter = stockBefore + quantityChange
+
+    if (stockAfter < 0) {
+      return
+    }
+
+    const createdAt = new Date().toISOString()
+    const idSuffix = createdAt.replace(/[-:.TZ]/g, "")
+
+    setProducts((current) =>
+      current.map((product) =>
+        product.id === adjustmentProduct.id
+          ? {
+              ...product,
+              currentStock: stockAfter,
+              updatedAt: createdAt,
+            }
+          : product
+      )
+    )
+    setStockMovements((current) => [
+      {
+        id: `move-${idSuffix}`,
+        productId: adjustmentProduct.id,
+        businessId: business.id,
+        type: "adjustment",
+        quantityChange,
+        stockBefore,
+        stockAfter,
+        referenceId: `adj-${idSuffix}`,
+        notes,
+        createdAt,
+      },
+      ...current,
+    ])
+    closeAdjustmentModal()
   }
 
   function confirmDeleteProduct() {
@@ -827,6 +1115,11 @@ export function InventoryWorkspace({
       return
     }
 
+    if (field === "supplier") {
+      setSupplierOptions(values)
+      return
+    }
+
     setUnitOptions(values)
   }
 
@@ -836,12 +1129,19 @@ export function InventoryWorkspace({
     previousValue: string
   ) {
     setAddDraft((current) =>
-      current[field] === previousValue
+      field in current && current[field as keyof AddProductDraft] === previousValue
         ? { ...current, [field]: nextValue }
         : current
     )
+    setRestockDraft((current) =>
+      field === "supplier" && current.supplierName === previousValue
+        ? { ...current, supplierName: nextValue }
+        : current
+    )
     setEditDraft((current) =>
-      current && current[field] === previousValue
+      current &&
+      field in current &&
+      current[field as keyof ProductFormDraft] === previousValue
         ? { ...current, [field]: nextValue }
         : current
     )
@@ -1113,6 +1413,26 @@ export function InventoryWorkspace({
                         </div>
                       )}
 
+                      <div className="grid gap-2 md:flex md:justify-end">
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            viewingProduct && openRestockModal(viewingProduct.id)
+                          }
+                        >
+                          Restock
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            viewingProduct &&
+                            openAdjustmentModal(viewingProduct.id)
+                          }
+                        >
+                          Manual adjustment
+                        </Button>
+                      </div>
+
                       <div className="grid gap-3">
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-sm font-medium">
@@ -1235,6 +1555,138 @@ export function InventoryWorkspace({
                   <SheetClose render={<Button variant="secondary" />}>
                     Close
                   </SheetClose>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+
+            <Sheet
+              open={restockProduct !== null}
+              onOpenChange={(open) => {
+                if (!open) {
+                  closeRestockModal()
+                }
+              }}
+            >
+              <SheetContent
+                side={isMobile ? "bottom" : "center"}
+                className={cn(
+                  "rounded-none data-[side=center]:max-w-3xl",
+                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
+                )}
+              >
+                <SheetHeader className="border-b">
+                  <SheetTitle>Restock</SheetTitle>
+                </SheetHeader>
+                <div className="grid gap-4 p-4">
+                  {restockProduct ? (
+                    <>
+                      <div className="border border-border p-4">
+                        <p className="text-sm font-medium">
+                          {restockProduct.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Current stock {restockProduct.currentStock}{" "}
+                          {restockProduct.unit}
+                        </p>
+                      </div>
+                      <RestockForm
+                        draft={restockDraft}
+                        supplierOptions={supplierOptions}
+                        onChange={(field, value) =>
+                          setRestockDraft((current) => ({
+                            ...current,
+                            [field]: value,
+                          }))
+                        }
+                        onSupplierOptionsChange={setSupplierOptions}
+                        onRequestSupplierEdit={(value) =>
+                          openOptionDialog("supplier", "edit", value)
+                        }
+                        onRequestSupplierDelete={(value) =>
+                          openOptionDialog("supplier", "delete", value)
+                        }
+                      />
+                    </>
+                  ) : null}
+                </div>
+                <SheetFooter className="flex-row justify-end border-t">
+                  <SheetClose render={<Button variant="secondary" />}>
+                    Cancel
+                  </SheetClose>
+                  <Button
+                    disabled={
+                      Number(restockDraft.quantityAdded) <= 0 ||
+                      Number(restockDraft.costPerUnit) < 0 ||
+                      restockDraft.supplierName.trim().length === 0
+                    }
+                    onClick={applyRestock}
+                  >
+                    Save restock
+                  </Button>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+
+            <Sheet
+              open={adjustmentProduct !== null}
+              onOpenChange={(open) => {
+                if (!open) {
+                  closeAdjustmentModal()
+                }
+              }}
+            >
+              <SheetContent
+                side={isMobile ? "bottom" : "center"}
+                className={cn(
+                  "rounded-none",
+                  isMobile && "max-h-[85svh] gap-0 overflow-y-auto border-t"
+                )}
+              >
+                <SheetHeader className="border-b">
+                  <SheetTitle>Manual adjustment</SheetTitle>
+                </SheetHeader>
+                <div className="grid gap-4 p-4">
+                  {adjustmentProduct ? (
+                    <>
+                      <div className="border border-border p-4">
+                        <p className="text-sm font-medium">
+                          {adjustmentProduct.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Current stock {adjustmentProduct.currentStock}{" "}
+                          {adjustmentProduct.unit}
+                        </p>
+                      </div>
+                      <AdjustmentForm
+                        draft={adjustmentDraft}
+                        onChange={(field, value) =>
+                          setAdjustmentDraft((current) => ({
+                            ...current,
+                            [field]: value,
+                          }))
+                        }
+                      />
+                    </>
+                  ) : null}
+                </div>
+                <SheetFooter className="flex-row justify-end border-t">
+                  <SheetClose render={<Button variant="secondary" />}>
+                    Cancel
+                  </SheetClose>
+                  <Button
+                    disabled={
+                      Number(adjustmentDraft.quantityChange) === 0 ||
+                      adjustmentDraft.notes.trim().length === 0 ||
+                      (adjustmentProduct
+                        ? adjustmentProduct.currentStock +
+                            Number(adjustmentDraft.quantityChange) <
+                          0
+                        : false)
+                    }
+                    onClick={applyAdjustment}
+                  >
+                    Save adjustment
+                  </Button>
                 </SheetFooter>
               </SheetContent>
             </Sheet>
@@ -1364,7 +1816,11 @@ export function InventoryWorkspace({
                   {optionDialog?.action === "edit" ? (
                     <Field
                       label={
-                        optionDialog.field === "category" ? "Category" : "Unit"
+                        optionDialog.field === "category"
+                          ? "Category"
+                          : optionDialog.field === "unit"
+                            ? "Unit"
+                            : "Supplier"
                       }
                     >
                       <Input
@@ -1376,8 +1832,12 @@ export function InventoryWorkspace({
                     </Field>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Remove &quot;{optionDialog?.value}&quot; from the{" "}
-                      {optionDialog?.field} options?
+                      Delete{" "}
+                      <span className="font-medium text-foreground">
+                        {optionDialog?.value ??
+                          `this ${optionDialog?.field ?? "option"}`}
+                      </span>
+                      ?
                     </p>
                   )}
                 </div>

@@ -273,7 +273,7 @@ export function HomeShell() {
                   size="sm"
                   onClick={() => setSelectedModule(item.label)}
                   className={cn(
-                    "text-[14px] text-muted-foreground",
+                    "text-xs text-muted-foreground",
                     item.label === selectedModule &&
                       "bg-primary text-white hover:bg-primary hover:text-white"
                   )}
@@ -288,7 +288,7 @@ export function HomeShell() {
                 type="button"
                 variant="outline"
                 size="icon-sm"
-                className="rounded-full text-[14px] text-muted-foreground hover:bg-primary hover:text-white"
+                className="rounded-full text-xs text-muted-foreground hover:bg-primary hover:text-white"
                 aria-label="Notifications"
               >
                 <Bell className="size-4" />
@@ -297,7 +297,7 @@ export function HomeShell() {
                 type="button"
                 variant="outline"
                 size="icon-sm"
-                className="rounded-full text-[14px] text-muted-foreground hover:bg-primary hover:text-white"
+                className="rounded-full text-xs text-muted-foreground hover:bg-primary hover:text-white"
                 aria-label="Profile"
               >
                 <User className="size-4" />

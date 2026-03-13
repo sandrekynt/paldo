@@ -1,15 +1,15 @@
-import { Geist_Mono, Noto_Sans } from "next/font/google"
+import { JetBrains_Mono } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 
-const notoSans = Noto_Sans({
+const jetBrainsMonoSans = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-sans",
 })
 
-const fontMono = Geist_Mono({
+const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
@@ -23,7 +23,11 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("font-sans antialiased", fontMono.variable, notoSans.variable)}
+      className={cn(
+        "font-sans antialiased",
+        jetBrainsMono.variable,
+        jetBrainsMonoSans.variable
+      )}
     >
       <body className="min-h-svh bg-background text-foreground">
         <ThemeProvider defaultTheme="light" enableSystem={false}>
