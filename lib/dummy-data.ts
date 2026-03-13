@@ -110,7 +110,7 @@ export type DemoInventoryDrafts = {
   }
   restock: {
     quantityAdded: string
-    costPerUnit: string
+    totalCost: string
     notes: string
   }
   adjustment: {
@@ -485,7 +485,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
       },
       restock: {
         quantityAdded: "36",
-        costPerUnit: "7.60",
+        totalCost: "273.60",
         notes: "Prep for weekend foot traffic and school dismissal rush.",
       },
       adjustment: {
@@ -812,7 +812,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
       },
       restock: {
         quantityAdded: "15",
-        costPerUnit: "17.50",
+        totalCost: "262.50",
         notes: "Prepare extra refill capacity before Saturday village rounds.",
       },
       adjustment: {
@@ -1153,7 +1153,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
       },
       restock: {
         quantityAdded: "20",
-        costPerUnit: "55.50",
+        totalCost: "1110.00",
         notes: "Reserve incoming kilos for two contractor accounts on Friday pickup.",
       },
       adjustment: {

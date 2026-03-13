@@ -75,7 +75,7 @@ type AddProductDraft = ProductFormDraft & {
 
 type RestockDraft = {
   quantityAdded: string
-  costPerUnit: string
+  totalCost: string
   notes: string
 }
 
@@ -99,7 +99,7 @@ function createEmptyAddProductDraft(): AddProductDraft {
 function createEmptyRestockDraft(): RestockDraft {
   return {
     quantityAdded: "",
-    costPerUnit: "",
+    totalCost: "",
     notes: "",
   }
 }
@@ -221,14 +221,16 @@ function getProductStatus(product: DemoProduct): ProductStatus {
 function Field({
   label,
   hint,
+  className,
   children,
 }: {
   label: string
   hint?: string
+  className?: string
   children: React.ReactNode
 }) {
   return (
-    <label className="grid gap-2 text-xs">
+    <label className={cn("grid gap-2 text-xs", className)}>
       <div className="flex items-center justify-between gap-3">
         <span className="font-medium text-foreground">{label}</span>
         {hint ? <span className="text-muted-foreground">{hint}</span> : null}
@@ -583,13 +585,13 @@ function RestockForm({
             onChange={(event) => onChange("quantityAdded", event.target.value)}
           />
         </Field>
-        <Field label="Cost per unit">
+        <Field label="Total cost">
           <Input
-            value={draft.costPerUnit}
-            onChange={(event) => onChange("costPerUnit", event.target.value)}
+            value={draft.totalCost}
+            onChange={(event) => onChange("totalCost", event.target.value)}
           />
         </Field>
-        <Field label="Notes">
+        <Field label="Notes" className="md:col-span-2">
           <Input
             value={draft.notes}
             onChange={(event) => onChange("notes", event.target.value)}
@@ -960,16 +962,15 @@ export function InventoryWorkspace({
     }
 
     const quantityAdded = Number(restockDraft.quantityAdded)
-    const costPerUnitValue = restockDraft.costPerUnit.trim()
-    const costPerUnit =
-      costPerUnitValue.length === 0 ? 0 : Number(costPerUnitValue)
+    const totalCostValue = restockDraft.totalCost.trim()
+    const totalCost = totalCostValue.length === 0 ? 0 : Number(totalCostValue)
     const notes = restockDraft.notes.trim()
 
     if (
       !Number.isFinite(quantityAdded) ||
       quantityAdded <= 0 ||
-      !Number.isFinite(costPerUnit) ||
-      costPerUnit < 0
+      !Number.isFinite(totalCost) ||
+      totalCost < 0
     ) {
       return
     }
@@ -979,6 +980,7 @@ export function InventoryWorkspace({
     const stockBefore = restockProduct.currentStock
     const stockAfter = stockBefore + quantityAdded
     const movementId = `move-${idSuffix}`
+    const costPerUnit = totalCost > 0 ? totalCost / quantityAdded : 0
 
     setProducts((current) =>
       current.map((product) =>
@@ -1014,7 +1016,7 @@ export function InventoryWorkspace({
         businessId: business.id,
         quantityAdded,
         costPerUnit,
-        totalCost: quantityAdded * costPerUnit,
+        totalCost,
         notes,
         createdAt,
       },
@@ -1584,9 +1586,9 @@ export function InventoryWorkspace({
                   <Button
                     disabled={
                       Number(restockDraft.quantityAdded) <= 0 ||
-                      (restockDraft.costPerUnit.trim().length > 0 &&
-                        (!Number.isFinite(Number(restockDraft.costPerUnit)) ||
-                          Number(restockDraft.costPerUnit) < 0))
+                      (restockDraft.totalCost.trim().length > 0 &&
+                        (!Number.isFinite(Number(restockDraft.totalCost)) ||
+                          Number(restockDraft.totalCost) < 0))
                     }
                     onClick={applyRestock}
                   >
