@@ -75,18 +75,15 @@ function FilterPanelContent({
   onClearFilters: () => void
 }) {
   return (
-    <>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-medium">Filters</p>
-        <button
-          type="button"
-          className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
-          onClick={onClearFilters}
-        >
-          Clear
-        </button>
-      </div>
-      <div className="grid gap-4 text-xs">
+    <div className="relative">
+      <button
+        type="button"
+        className="absolute top-0 right-0 cursor-pointer text-xs text-muted-foreground hover:text-foreground"
+        onClick={onClearFilters}
+      >
+        Clear
+      </button>
+      <div className="grid gap-4 pr-12 text-xs">
         <FilterSection
           title="Categories"
           items={availableCategories.map((category) => ({
@@ -103,7 +100,7 @@ function FilterPanelContent({
           onToggle={(status) => onToggleStatus(status as ProductStatus)}
         />
       </div>
-    </>
+    </div>
   )
 }
 

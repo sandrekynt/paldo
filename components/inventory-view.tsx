@@ -36,7 +36,6 @@ export function InventoryView({
   selectedBusinessId,
 }: InventoryViewProps) {
   const {
-    activeProductsCount,
     addDraft,
     addErrors,
     addProductOpen,
@@ -67,7 +66,6 @@ export function InventoryView({
     handleAddProductOpenChange,
     isEditingArchivedProduct,
     isMobile,
-    lowStockCount,
     mobileFiltersOpen,
     onAddDraftChange,
     onAdjustmentDraftChange,
@@ -83,7 +81,6 @@ export function InventoryView({
     optionDialog,
     optionDialogError,
     optionDialogValue,
-    outOfStockCount,
     pageStart,
     paginatedProducts,
     productsPerPage,
@@ -117,16 +114,7 @@ export function InventoryView({
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="grid gap-1">
-              <CardTitle>Product list</CardTitle>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>All stock: {activeProductsCount}</span>
-                <span>&bull;</span>
-                <span>Low stock: {lowStockCount}</span>
-                <span>&bull;</span>
-                <span>No stock: {outOfStockCount}</span>
-              </div>
-            </div>
+            <CardTitle>Product list</CardTitle>
             <AddProductSheet
               isMobile={isMobile}
               open={addProductOpen}
