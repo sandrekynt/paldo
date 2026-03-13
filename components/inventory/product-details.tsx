@@ -75,117 +75,61 @@ export function InventoryProductDetailsContent({
 
   return (
     <>
-      {isMobile ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-6 border border-border p-4">
-          <div className="grid content-start gap-4">
-            <ProductDetailItem
-              label="Name"
-              value={<p className="text-sm font-medium">{product.name}</p>}
-            />
-            <ProductDetailItem
-              label="SKU"
-              value={<p className="text-sm">{product.sku}</p>}
-            />
-            <ProductDetailItem
-              label="Category"
-              value={<p className="text-sm">{product.categoryName}</p>}
-            />
-            <ProductDetailItem
-              label="Buying price"
-              value={
-                <p className="text-sm">
-                  {formatCurrency(product.buyingPrice, currency)}
-                </p>
-              }
-            />
-            <ProductDetailItem
-              label="Stock qty"
-              value={
-                <p className="text-sm">
-                  {product.currentStock} {product.unitName}
-                </p>
-              }
-            />
-          </div>
-          <div className="grid content-start gap-4">
-            <ProductDetailItem
-              label="Status"
-              align="right"
-              value={<InventoryStatusBadge product={product} />}
-            />
-            <ProductDetailItem
-              label="Unit"
-              align="right"
-              value={<p className="text-sm">{product.unitName}</p>}
-            />
-            <ProductDetailItem
-              label="Selling price"
-              align="right"
-              value={
-                <p className="text-sm">
-                  {formatCurrency(product.sellingPrice, currency)}
-                </p>
-              }
-            />
-            <ProductDetailItem
-              label="Threshold"
-              align="right"
-              value={<p className="text-sm">{product.lowStockThreshold}</p>}
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="grid gap-4 border border-border p-4 md:grid-cols-2">
-          <ProductDetailItem
-            label="Name"
-            value={<p className="text-sm font-medium">{product.name}</p>}
-          />
-          <ProductDetailItem
-            label="Status"
-            value={<InventoryStatusBadge product={product} />}
-          />
-          <ProductDetailItem
-            label="SKU"
-            value={<p className="text-sm">{product.sku}</p>}
-          />
-          <ProductDetailItem
-            label="Category"
-            value={<p className="text-sm">{product.categoryName}</p>}
-          />
-          <ProductDetailItem
-            label="Unit"
-            value={<p className="text-sm">{product.unitName}</p>}
-          />
-          <ProductDetailItem
-            label="Buying price"
-            value={
-              <p className="text-sm">
-                {formatCurrency(product.buyingPrice, currency)}
-              </p>
-            }
-          />
-          <ProductDetailItem
-            label="Selling price"
-            value={
-              <p className="text-sm">
-                {formatCurrency(product.sellingPrice, currency)}
-              </p>
-            }
-          />
-          <ProductDetailItem
-            label="Stock qty"
-            value={
-              <p className="text-sm">
-                {product.currentStock} {product.unitName}
-              </p>
-            }
-          />
-          <ProductDetailItem
-            label="Threshold"
-            value={<p className="text-sm">{product.lowStockThreshold}</p>}
-          />
-        </div>
-      )}
+      <div
+        className={cn(
+          "grid gap-4 border border-border p-4",
+          isMobile ? "grid-cols-2" : "md:grid-cols-2"
+        )}
+      >
+        <ProductDetailItem
+          label="Name"
+          value={<p className="text-sm font-medium">{product.name}</p>}
+        />
+        <ProductDetailItem
+          label="Status"
+          value={<InventoryStatusBadge product={product} />}
+        />
+        <ProductDetailItem
+          label="SKU"
+          value={<p className="text-sm">{product.sku}</p>}
+        />
+        <ProductDetailItem
+          label="Category"
+          value={<p className="text-sm">{product.categoryName}</p>}
+        />
+        <ProductDetailItem
+          label="Unit"
+          value={<p className="text-sm">{product.unitName}</p>}
+        />
+        <ProductDetailItem
+          label="Buying price"
+          value={
+            <p className="text-sm">
+              {formatCurrency(product.buyingPrice, currency)}
+            </p>
+          }
+        />
+        <ProductDetailItem
+          label="Selling price"
+          value={
+            <p className="text-sm">
+              {formatCurrency(product.sellingPrice, currency)}
+            </p>
+          }
+        />
+        <ProductDetailItem
+          label="Stock qty"
+          value={
+            <p className="text-sm">
+              {product.currentStock} {product.unitName}
+            </p>
+          }
+        />
+        <ProductDetailItem
+          label="Threshold"
+          value={<p className="text-sm">{product.lowStockThreshold}</p>}
+        />
+      </div>
 
       <div className="grid gap-2 md:flex md:justify-end">
         <Button variant="outline" onClick={onRestock}>
