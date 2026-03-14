@@ -847,7 +847,7 @@ export function StockInForm({
             return (
               <div
                 key={index}
-                className="grid gap-3 border border-border p-3 md:grid-cols-[minmax(0,1.6fr)_8rem_10rem_auto]"
+                className="grid gap-3 border border-border p-3 md:grid-cols-[minmax(0,1.5fr)_9rem_9rem_auto]"
               >
                 <Field
                   label="Product"
