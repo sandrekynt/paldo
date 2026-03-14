@@ -186,7 +186,7 @@ export function InventoryProductDetailsContent({
                     onAdjustment()
                   }}
                 >
-                  Manual adjustment
+                  Adjust stock
                 </button>
               </PopoverPrimitive.Popup>
             </PopoverPrimitive.Positioner>

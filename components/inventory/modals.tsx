@@ -298,7 +298,7 @@ export function AdjustmentSheet({
         className={getSheetClassName(isMobile)}
       >
         <SheetHeader className="border-b">
-          <SheetTitle>Manual adjustment</SheetTitle>
+          <SheetTitle>Adjust stock</SheetTitle>
         </SheetHeader>
         <div className="grid gap-4 p-4">
           {product ? (
