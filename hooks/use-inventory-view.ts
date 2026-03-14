@@ -18,7 +18,8 @@ import {
   createCategoryRecord,
   createEmptyAddProductDraft,
   createEmptyAdjustmentDraft,
-  createEmptyRestockDraft,
+  createEmptyStockInDraft,
+  createEmptyStockInLineDraft,
   createInventoryStamp,
   createUnitRecord,
   getProductStatus,
@@ -29,13 +30,13 @@ import {
   type FieldErrors,
   type OptionField,
   type ProductFormDraft,
-  type RestockDraft,
+  type StockInDraft,
 } from "@/lib/inventory"
 import {
   resolveProductRelations,
   validateAdjustmentDraft,
   validateProductDraft,
-  validateRestockDraft,
+  validateStockInDraft,
 } from "@/lib/inventory-validation"
 
 const PRODUCTS_PER_PAGE = 5
@@ -102,25 +103,25 @@ export function useInventoryView(selectedBusinessId: string) {
     closeAdjustmentModal,
     closeEditModal,
     closeOptionDialog,
-    closeRestockModal,
+    closeStockInModal,
     closeStockHistoryModal,
     closeViewModal,
     editDraft,
     editErrors,
     editingProductId,
     handleAddProductOpenChange,
+    handleStockInOpenChange,
     openAdjustmentModal,
     openEditModal,
     openOptionDialog,
-    openRestockModal,
     openStockHistoryModal,
     openViewModal,
     optionDialog,
     optionDialogError,
     optionDialogValue,
-    restockDraft,
-    restockErrors,
-    restockProductId,
+    stockInDraft,
+    stockInErrors,
+    stockInOpen,
     setAddDraft,
     setAddErrors,
     setAddProductOpen,
@@ -135,9 +136,9 @@ export function useInventoryView(selectedBusinessId: string) {
     setOptionDialogError,
     setOptionDialogValue,
     setOptionDialogValueWithReset,
-    setRestockDraft,
-    setRestockErrors,
-    setRestockProductId,
+    setStockInDraft,
+    setStockInErrors,
+    setStockInOpen,
     setStockHistoryProductId,
     setViewingProductId,
     stockHistoryProductId,
@@ -166,9 +167,9 @@ export function useInventoryView(selectedBusinessId: string) {
     setEditDraft(null)
     setEditErrors({})
     setEditingProductId(null)
-    setRestockProductId(null)
-    setRestockDraft(createEmptyRestockDraft())
-    setRestockErrors({})
+    setStockInOpen(false)
+    setStockInDraft(createEmptyStockInDraft())
+    setStockInErrors({})
     setAdjustmentProductId(null)
     setAdjustmentDraft(createEmptyAdjustmentDraft())
     setAdjustmentErrors({})
@@ -189,9 +190,9 @@ export function useInventoryView(selectedBusinessId: string) {
     setOptionDialogError,
     setOptionDialogValue,
     setPage,
-    setRestockDraft,
-    setRestockErrors,
-    setRestockProductId,
+    setStockInDraft,
+    setStockInErrors,
+    setStockInOpen,
     setStockHistoryProductId,
     setSearchQuery,
     setSelectedCategories,
@@ -208,6 +209,15 @@ export function useInventoryView(selectedBusinessId: string) {
     [units]
   )
   const activeProducts = products.filter((product) => product.isActive)
+  const stockInProductOptions = React.useMemo(
+    () =>
+      activeProducts.map((product) => ({
+        id: product.id,
+        label: product.name,
+        description: `${product.sku} · ${product.categoryName} · ${product.currentStock} ${product.unitName}`,
+      })),
+    [activeProducts]
+  )
   const activeProductsCount = activeProducts.length
   const lowStockCount = activeProducts.filter(
     (product) => getProductStatus(product) === "low"
@@ -222,10 +232,6 @@ export function useInventoryView(selectedBusinessId: string) {
   const viewingProduct =
     viewingProductId !== null
       ? (products.find((product) => product.id === viewingProductId) ?? null)
-      : null
-  const restockProduct =
-    restockProductId !== null
-      ? (products.find((product) => product.id === restockProductId) ?? null)
       : null
   const stockHistoryProduct =
     stockHistoryProductId !== null
@@ -362,78 +368,87 @@ export function useInventoryView(selectedBusinessId: string) {
     closeEditModal()
   }
 
-  function applyRestock() {
-    if (!restockProduct) {
-      return
-    }
-
-    const errors = validateRestockDraft(restockDraft)
-    setRestockErrors(errors)
+  function applyStockIn() {
+    const errors = validateStockInDraft(stockInDraft, activeProducts)
+    setStockInErrors(errors)
 
     if (Object.keys(errors).length > 0) {
       return
     }
 
-    const quantityAdded = Number(restockDraft.quantityAdded)
-    const totalCostValue = restockDraft.totalCost.trim()
-    const totalCost = totalCostValue.length === 0 ? 0 : Number(totalCostValue)
-    const notes = restockDraft.notes.trim()
+    const timestampBase = stockInDraft.receivedAt
+      ? new Date(`${stockInDraft.receivedAt}T12:00:00`)
+      : new Date()
+    const { createdAt, idSuffix } = createInventoryStamp(timestampBase)
+    const supplierName = stockInDraft.supplierName.trim()
+    const notes = stockInDraft.notes.trim()
+    const nextProducts = new Map(products.map((product) => [product.id, product]))
+    const nextMovements: DemoStockMovement[] = []
+    const nextRestocks: DemoRestock[] = []
 
-    if (
-      !Number.isFinite(quantityAdded) ||
-      quantityAdded <= 0 ||
-      !Number.isFinite(totalCost) ||
-      totalCost < 0
-    ) {
-      return
-    }
+    for (const [index, item] of stockInDraft.items.entries()) {
+      const product = nextProducts.get(item.productId)
 
-    const { createdAt, idSuffix } = createInventoryStamp()
-    const stockBefore = restockProduct.currentStock
-    const stockAfter = stockBefore + quantityAdded
-    const movementId = `move-${idSuffix}`
-    const costPerUnit = totalCost > 0 ? totalCost / quantityAdded : 0
+      if (!product || !product.isActive) {
+        return
+      }
 
-    setProducts((current) =>
-      current.map((product) =>
-        product.id === restockProduct.id
-          ? {
-              ...product,
-              currentStock: stockAfter,
-              updatedAt: createdAt,
-            }
-          : product
-      )
-    )
-    setStockMovements((current) => [
-      {
-        id: movementId,
-        productId: restockProduct.id,
+      const quantityAdded = Number(item.quantityAdded)
+      const unitCostValue = item.unitCost.trim()
+      const unitCost = unitCostValue.length === 0 ? 0 : Number(unitCostValue)
+
+      if (
+        !Number.isFinite(quantityAdded) ||
+        quantityAdded <= 0 ||
+        !Number.isFinite(unitCost) ||
+        unitCost < 0
+      ) {
+        return
+      }
+
+      const stockBefore = product.currentStock
+      const stockAfter = stockBefore + quantityAdded
+      const lineSuffix = `${idSuffix}-${String(index + 1).padStart(2, "0")}`
+      const referenceId = `stock-in-${lineSuffix}`
+      const lineTotal = unitCost > 0 ? quantityAdded * unitCost : 0
+      const movementNotes = [notes, supplierName && `Supplier: ${supplierName}`]
+        .filter(Boolean)
+        .join(" · ")
+
+      nextProducts.set(product.id, {
+        ...product,
+        currentStock: stockAfter,
+        updatedAt: createdAt,
+      })
+      nextMovements.push({
+        id: `move-${lineSuffix}`,
+        productId: product.id,
         businessId: business.id,
         type: "restock",
         quantityChange: quantityAdded,
         stockBefore,
         stockAfter,
-        referenceId: `restock-${idSuffix}`,
-        notes: notes.length > 0 ? notes : "Restocked inventory.",
+        referenceId,
+        notes:
+          movementNotes.length > 0 ? movementNotes : "Stock received through batch stock in.",
         createdAt,
-      },
-      ...current,
-    ])
-    setRestockEntries((current) => [
-      {
-        id: `restock-${idSuffix}`,
-        productId: restockProduct.id,
+      })
+      nextRestocks.push({
+        id: referenceId,
+        productId: product.id,
         businessId: business.id,
         quantityAdded,
-        costPerUnit,
-        totalCost,
+        costPerUnit: unitCost,
+        totalCost: lineTotal,
         notes,
         createdAt,
-      },
-      ...current,
-    ])
-    closeRestockModal()
+      })
+    }
+
+    setProducts(Array.from(nextProducts.values()))
+    setStockMovements((current) => [...nextMovements.reverse(), ...current])
+    setRestockEntries((current) => [...nextRestocks.reverse(), ...current])
+    closeStockInModal()
   }
 
   function applyAdjustment() {
@@ -715,14 +730,15 @@ export function useInventoryView(selectedBusinessId: string) {
     addDraft,
     addErrors,
     categoryOptions,
+    stockInOpen,
+    stockInProductOptions,
     unitOptions,
     viewingProduct,
     viewingProductId,
     stockHistoryProduct,
     stockHistoryMovements,
-    restockProduct,
-    restockDraft,
-    restockErrors,
+    stockInDraft,
+    stockInErrors,
     adjustmentProduct,
     adjustmentDraft,
     adjustmentErrors,
@@ -738,11 +754,10 @@ export function useInventoryView(selectedBusinessId: string) {
     toggleStatus,
     openViewModal,
     openEditModal,
-    openRestockModal,
     openStockHistoryModal,
     openAdjustmentModal,
     closeViewModal,
-    closeRestockModal,
+    closeStockInModal,
     closeStockHistoryModal,
     closeAdjustmentModal,
     closeEditModal,
@@ -757,12 +772,61 @@ export function useInventoryView(selectedBusinessId: string) {
       )
       clearFieldError(field, setEditErrors)
     },
-    onRestockDraftChange: (field: keyof RestockDraft, value: string) => {
-      setRestockDraft((current) => ({
+    onStockInDraftChange: (
+      field: "receivedAt" | "supplierName" | "notes",
+      value: string
+    ) => {
+      setStockInDraft((current) => ({
         ...current,
         [field]: value,
       }))
-      clearFieldError(field, setRestockErrors)
+      clearFieldError(field, setStockInErrors)
+    },
+    onStockInItemChange: (
+      index: number,
+      field: "productId" | "quantityAdded" | "unitCost",
+      value: string
+    ) => {
+      setStockInDraft((current) => ({
+        ...current,
+        items: current.items.map((item, itemIndex) =>
+          itemIndex === index ? { ...item, [field]: value } : item
+        ),
+      }))
+      clearFieldError("items", setStockInErrors)
+      clearFieldError(`items.${index}.${field}`, setStockInErrors)
+    },
+    addStockInItem: () => {
+      setStockInDraft((current) => ({
+        ...current,
+        items: [...current.items, createEmptyStockInLineDraft()],
+      }))
+      clearFieldError("items", setStockInErrors)
+    },
+    removeStockInItem: (index: number) => {
+      setStockInDraft((current) => {
+        const nextItems = current.items.filter(
+          (_, itemIndex) => itemIndex !== index
+        )
+
+        return {
+          ...current,
+          items:
+            nextItems.length > 0 ? nextItems : [createEmptyStockInLineDraft()],
+        }
+      })
+      setStockInErrors((current) => {
+        const next = { ...current }
+
+        delete next.items
+        Object.keys(next).forEach((key) => {
+          if (key.startsWith("items.")) {
+            delete next[key]
+          }
+        })
+
+        return next
+      })
     },
     onAdjustmentDraftChange: (field: keyof AdjustmentDraft, value: string) => {
       setAdjustmentDraft((current) => ({
@@ -779,9 +843,10 @@ export function useInventoryView(selectedBusinessId: string) {
     closeOptionDialog,
     setArchiveProductOpen,
     setOptionDialogValue: setOptionDialogValueWithReset,
+    handleStockInOpenChange,
     saveAddProduct,
     saveEditProduct,
-    applyRestock,
+    applyStockIn,
     applyAdjustment,
     toggleCategoryFilter,
     clearFilters,

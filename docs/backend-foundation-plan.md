@@ -12,7 +12,8 @@ other modules later.
 - Replace inventory demo data with a real SQLite-backed backend.
 - Use Drizzle ORM with a structure that can move to Turso later with minimal
   churn.
-- Keep the current UI flow mostly intact while improving data boundaries.
+- Keep the current inventory UI direction intact while improving data
+  boundaries.
 - Add a real `users` model and capture the acting user for inventory logging.
 - Use consistent naming and layering across backend and frontend.
 
@@ -21,7 +22,17 @@ other modules later.
 - Full auth implementation.
 - Public API design.
 - Backend implementation for payroll, utang, dashboard, or POS.
-- Reworking the inventory UX while we are replacing the data source.
+- Reworking the inventory UX beyond the already-agreed batch `Stock in`
+  direction.
+
+## Current Inventory UI Assumptions
+
+- `Stock in` is a page-level inventory action.
+- `Add product` is a page-level secondary action beside `Stock in`.
+- The product list card is browse-focused: search, filters, list, pagination.
+- `Stock movement history` stays contextual to a specific product.
+- `Adjust stock` is secondary and surfaced from product history, not from the
+  main list or product details view.
 
 ## Stack Decisions
 
@@ -58,7 +69,7 @@ Use server actions for:
 - add product
 - edit product
 - archive or restore product
-- restock product
+- stock in
 - adjust stock
 
 Use route handlers only when there is a real external boundary, such as:
@@ -100,7 +111,7 @@ app/
       add-product.ts
       edit-product.ts
       archive-product.ts
-      restock-product.ts
+      stock-in.ts
       adjust-stock.ts
 
 db/
@@ -170,7 +181,7 @@ Examples:
 
 - `actorUserId`
 - `lowStockThreshold`
-- `restock-product.ts`
+- `stock-in.ts`
 - `inventory.ts`
 
 ### Frontend Data Shapes
@@ -334,7 +345,8 @@ Notes:
 
 Purpose:
 
-- explicit inbound stock events with financial context
+- explicit inbound stock entries with financial context
+- one row per received product line, even when the UI submits one batch stock-in
 
 Columns:
 
@@ -393,11 +405,13 @@ Notes:
 - `reference_type` is better than a single ambiguous `reference_id`.
 - POS can later create `sale` and `void` movements without redesigning this
   table.
+- The UI label can stay `Stock in` while backend movement type stays `restock`
+  for inbound inventory.
 
 ## Audit Rules
 
 - Every stock change must create a `stock_movements` row.
-- Every restock must create both:
+- Every stock-in line must create both:
   - a `restocks` row
   - a matching `stock_movements` row
 - Every adjust-stock action must create a `stock_movements` row with:
@@ -414,7 +428,7 @@ Notes:
 Wrap these in a single database transaction:
 
 - add product if category or unit may be created inline
-- restock product
+- stock in
 - adjust stock
 - archive or restore if additional audit rows are added later
 
@@ -464,6 +478,8 @@ The frontend should adopt backend conventions too.
 - Keep mutation payloads small and explicit.
 - Derive `currentUserId` on the server.
 - Revalidate or refresh inventory reads after mutation success.
+- Keep `Stock movement history` contextual to a product instead of introducing a
+  global ledger route in this phase.
 
 ### Form Handling
 
@@ -484,7 +500,7 @@ Recommended UI-facing types:
 - `InventoryStockMovementItem`
 - `AddProductInput`
 - `EditProductInput`
-- `RestockProductInput`
+- `StockInInput`
 - `AdjustStockInput`
 
 Keep DTOs separate from schema definitions.
@@ -518,7 +534,7 @@ Mutation rule:
 6. Add inventory query functions.
 7. Add inventory server actions.
 8. Replace `dummy-data` usage in inventory only.
-9. Verify the current UI against live data.
+9. Verify the current UI against the current batch `Stock in` flow.
 10. Move to auth integration after the inventory backend is stable.
 
 ## Risks To Avoid
@@ -549,4 +565,3 @@ When we start implementation, the next concrete task is:
 - add the DB config
 - define the inventory-first schema
 - add the seed script
-

@@ -5,7 +5,7 @@ import * as React from "react"
 import {
   AdjustmentForm,
   ProductForm,
-  RestockForm,
+  StockInForm,
 } from "@/components/inventory/forms"
 import {
   InventoryProductDetailsContent,
@@ -31,7 +31,7 @@ import {
   type FieldErrors,
   type OptionField,
   type ProductFormDraft,
-  type RestockDraft,
+  type StockInDraft,
 } from "@/lib/inventory"
 import { cn } from "@/lib/utils"
 
@@ -134,9 +134,7 @@ export function ViewProductSheet({
   currency,
   scrollRef,
   onOpenChange,
-  onRestock,
   onViewHistory,
-  onAdjustment,
 }: {
   isMobile: boolean
   open: boolean
@@ -145,9 +143,7 @@ export function ViewProductSheet({
   currency: string
   scrollRef: React.RefObject<HTMLDivElement | null>
   onOpenChange: (open: boolean) => void
-  onRestock: () => void
   onViewHistory: () => void
-  onAdjustment: () => void
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -168,9 +164,7 @@ export function ViewProductSheet({
               product={product}
               isMobile={isMobile}
               currency={currency}
-              onRestock={onRestock}
               onViewHistory={onViewHistory}
-              onAdjustment={onAdjustment}
             />
           ) : null}
         </div>
@@ -184,12 +178,14 @@ export function StockMovementHistorySheet({
   open,
   product,
   movements,
+  onAdjustment,
   onOpenChange,
 }: {
   isMobile: boolean
   open: boolean
   product: Pick<DemoProduct, "name" | "currentStock" | "unitName"> | null
   movements: DemoStockMovement[]
+  onAdjustment: () => void
   onOpenChange: (open: boolean) => void
 }) {
   return (
@@ -210,7 +206,12 @@ export function StockMovementHistorySheet({
             </SheetDescription>
           ) : null}
         </SheetHeader>
-        <div className="overflow-y-auto p-4">
+        <div className="grid gap-3 overflow-y-auto p-4">
+          <div className="flex justify-end">
+            <Button variant="ghost" size="sm" onClick={onAdjustment}>
+              Adjust stock
+            </Button>
+          </div>
           <StockMovementHistoryContent
             movements={movements}
             isMobile={isMobile}
@@ -221,23 +222,42 @@ export function StockMovementHistorySheet({
   )
 }
 
-export function RestockSheet({
+export function StockInSheet({
   isMobile,
   open,
-  product,
+  currency,
+  productOptions,
   draft,
   errors,
   onOpenChange,
   onDraftChange,
+  onItemChange,
+  onAddItem,
+  onRemoveItem,
   onSave,
 }: {
   isMobile: boolean
   open: boolean
-  product: Pick<DemoProduct, "name" | "currentStock" | "unitName"> | null
-  draft: RestockDraft
+  currency: string
+  productOptions: {
+    id: string
+    label: string
+    description?: string
+  }[]
+  draft: StockInDraft
   errors: FieldErrors
   onOpenChange: (open: boolean) => void
-  onDraftChange: (field: keyof RestockDraft, value: string) => void
+  onDraftChange: (
+    field: "receivedAt" | "supplierName" | "notes",
+    value: string
+  ) => void
+  onItemChange: (
+    index: number,
+    field: "productId" | "quantityAdded" | "unitCost",
+    value: string
+  ) => void
+  onAddItem: () => void
+  onRemoveItem: (index: number) => void
   onSave: () => void
 }) {
   return (
@@ -246,26 +266,26 @@ export function RestockSheet({
         side={isMobile ? "bottom" : "center"}
         className={getSheetClassName(
           isMobile,
-          "rounded-none data-[side=center]:max-w-3xl"
+          "rounded-none data-[side=center]:!w-[50vw] data-[side=center]:!max-w-[50vw]"
         )}
       >
         <SheetHeader className="border-b">
-          <SheetTitle>Restock</SheetTitle>
+          <SheetTitle>Stock in</SheetTitle>
         </SheetHeader>
-        <div className="grid gap-4 overflow-y-auto p-4">
-          {product ? (
-            <>
-              <ProductActionSummary product={product} />
-              <RestockForm
-                draft={draft}
-                errors={errors}
-                onChange={onDraftChange}
-              />
-            </>
-          ) : null}
+        <div className="overflow-y-auto p-4">
+          <StockInForm
+            draft={draft}
+            errors={errors}
+            currency={currency}
+            productOptions={productOptions}
+            onDraftChange={onDraftChange}
+            onItemChange={onItemChange}
+            onAddItem={onAddItem}
+            onRemoveItem={onRemoveItem}
+          />
         </div>
         <SheetFooter className="flex-row justify-end border-t">
-          <Button onClick={onSave}>Save restock</Button>
+          <Button onClick={onSave}>Save stock in</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -454,7 +474,10 @@ export function ArchiveProductSheet({
             <SheetClose render={<Button variant="secondary" />}>
               Cancel
             </SheetClose>
-            <Button variant={isArchived ? "default" : "outline"} onClick={onConfirm}>
+            <Button
+              variant={isArchived ? "default" : "outline"}
+              onClick={onConfirm}
+            >
               {isArchived ? "Restore" : "Archive"}
             </Button>
           </div>

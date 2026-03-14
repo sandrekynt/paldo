@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
-import { ChevronDown, Minus, PencilLine, Plus, Trash2 } from "lucide-react"
+import { ChevronDown, Minus, PencilLine, Plus, Trash2, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,8 +29,15 @@ import {
   type FieldErrors,
   type ProductFormDraft,
   type RestockDraft,
+  type StockInDraft,
 } from "@/lib/inventory"
 import { cn } from "@/lib/utils"
+
+type SelectOption = {
+  id: string
+  label: string
+  description?: string
+}
 
 function Field({
   label,
@@ -333,6 +340,214 @@ function SearchableOptionSelect({
   )
 }
 
+export function SearchableValueSelect({
+  value,
+  options,
+  placeholder,
+  searchPlaceholder,
+  emptyState = "No matches found.",
+  onChange,
+}: {
+  value: string
+  options: SelectOption[]
+  placeholder: string
+  searchPlaceholder?: string
+  emptyState?: string
+  onChange: (value: string) => void
+}) {
+  const isMobile = useIsMobile()
+  const [open, setOpen] = React.useState(false)
+  const [query, setQuery] = React.useState("")
+  const inputRef = React.useRef<HTMLInputElement | null>(null)
+  const rootRef = React.useRef<HTMLDivElement | null>(null)
+
+  const selectedOption =
+    value.length > 0 ? options.find((option) => option.id === value) : null
+  const normalizedQuery = query.trim().toLowerCase()
+  const visibleOptions =
+    normalizedQuery.length === 0
+      ? options
+      : options.filter((option) =>
+          `${option.label} ${option.description ?? ""}`
+            .toLowerCase()
+            .includes(normalizedQuery)
+        )
+
+  function closeMenu() {
+    setOpen(false)
+    setQuery("")
+  }
+
+  React.useEffect(() => {
+    if (!isMobile) {
+      return
+    }
+
+    const parentSheet = rootRef.current?.closest('[data-slot="sheet-content"]')
+
+    if (!(parentSheet instanceof HTMLElement)) {
+      return
+    }
+
+    if (open) {
+      parentSheet.style.filter = "blur(3px)"
+      parentSheet.style.transition = "filter 150ms ease"
+    } else {
+      parentSheet.style.filter = ""
+      parentSheet.style.transition = ""
+    }
+
+    return () => {
+      parentSheet.style.filter = ""
+      parentSheet.style.transition = ""
+    }
+  }, [isMobile, open])
+
+  const optionList = (
+    <div className="grid gap-3">
+      <Input
+        ref={inputRef}
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={searchPlaceholder ?? `Search ${placeholder.toLowerCase()}`}
+      />
+      <div className="grid max-h-[min(15rem,var(--available-height))] gap-2 overflow-y-auto">
+        {visibleOptions.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={cn(
+              "grid gap-1 border border-border px-2 py-2 text-left text-xs transition-colors hover:bg-muted",
+              value === option.id && "border-primary bg-primary/10"
+            )}
+            onClick={() => {
+              onChange(option.id)
+              closeMenu()
+            }}
+          >
+            <span className="font-medium">{option.label}</span>
+            {option.description ? (
+              <span className="text-muted-foreground">
+                {option.description}
+              </span>
+            ) : null}
+          </button>
+        ))}
+
+        {visibleOptions.length === 0 ? (
+          <div className="border border-border p-3 text-xs text-muted-foreground">
+            {emptyState}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+
+  if (isMobile) {
+    return (
+      <div ref={rootRef}>
+        <Sheet
+          open={open}
+          onOpenChange={(nextOpen) => {
+            setOpen(nextOpen)
+
+            if (!nextOpen) {
+              setQuery("")
+            }
+          }}
+        >
+          <SheetTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 w-full justify-between"
+              />
+            }
+          >
+            <span
+              className={cn(
+                "truncate",
+                !selectedOption && "text-muted-foreground"
+              )}
+            >
+              {selectedOption ? selectedOption.label : placeholder}
+            </span>
+            <ChevronDown className="size-4 text-muted-foreground" />
+          </SheetTrigger>
+          <SheetContent
+            side="bottom"
+            overlayClassName="z-70 bg-black/15 supports-backdrop-filter:backdrop-blur-sm"
+            className="z-80 max-h-[80dvh] gap-0 overflow-hidden border-t"
+          >
+            <SheetHeader className="border-b">
+              <SheetTitle>{placeholder}</SheetTitle>
+            </SheetHeader>
+            <div className="overflow-y-auto p-4">{optionList}</div>
+            <SheetFooter className="border-t">
+              <SheetClose render={<Button variant="ghost" />}>Done</SheetClose>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={rootRef}>
+      <PopoverPrimitive.Root
+        modal={false}
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen)
+
+          if (!nextOpen) {
+            setQuery("")
+          }
+        }}
+      >
+        <PopoverPrimitive.Trigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 w-full justify-between"
+            />
+          }
+        >
+          <span
+            className={cn(
+              "truncate",
+              !selectedOption && "text-muted-foreground"
+            )}
+          >
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+          <ChevronDown className="size-4 text-muted-foreground" />
+        </PopoverPrimitive.Trigger>
+
+        <PopoverPrimitive.Portal>
+          <PopoverPrimitive.Positioner
+            side="bottom"
+            align="start"
+            sideOffset={8}
+            collisionPadding={8}
+            className="z-70"
+          >
+            <PopoverPrimitive.Popup
+              initialFocus={inputRef}
+              finalFocus={false}
+              className="w-(--anchor-width) border border-border bg-popover p-4 shadow-sm outline-none"
+            >
+              {optionList}
+            </PopoverPrimitive.Popup>
+          </PopoverPrimitive.Positioner>
+        </PopoverPrimitive.Portal>
+      </PopoverPrimitive.Root>
+    </div>
+  )
+}
+
 function AdjustmentDirectionSelect({
   value,
   onChange,
@@ -538,6 +753,165 @@ export function RestockForm({
             onChange={(event) => onChange("notes", event.target.value)}
           />
         </Field>
+      </div>
+    </div>
+  )
+}
+
+export function StockInForm({
+  draft,
+  errors,
+  currency,
+  productOptions,
+  onDraftChange,
+  onItemChange,
+  onAddItem,
+  onRemoveItem,
+}: {
+  draft: StockInDraft
+  errors: FieldErrors
+  currency: string
+  productOptions: SelectOption[]
+  onDraftChange: (
+    field: "receivedAt" | "supplierName" | "notes",
+    value: string
+  ) => void
+  onItemChange: (
+    index: number,
+    field: "productId" | "quantityAdded" | "unitCost",
+    value: string
+  ) => void
+  onAddItem: () => void
+  onRemoveItem: (index: number) => void
+}) {
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Received date" error={errors.receivedAt}>
+          <Input
+            type="date"
+            value={draft.receivedAt}
+            onChange={(event) =>
+              onDraftChange("receivedAt", event.target.value)
+            }
+          />
+        </Field>
+        <Field label="Supplier" hint="Optional" error={errors.supplierName}>
+          <Input
+            value={draft.supplierName}
+            onChange={(event) =>
+              onDraftChange("supplierName", event.target.value)
+            }
+          />
+        </Field>
+        <Field
+          label="Notes"
+          hint="Optional"
+          error={errors.notes}
+          className="md:col-span-2"
+        >
+          <Input
+            value={draft.notes}
+            onChange={(event) => onDraftChange("notes", event.target.value)}
+          />
+        </Field>
+      </div>
+
+      <div className="grid gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Items</p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={onAddItem}>
+            <Plus className="size-3.5" />
+            Add item
+          </Button>
+        </div>
+
+        {errors.items ? (
+          <p className="text-[11px] text-red-600">{errors.items}</p>
+        ) : null}
+
+        <div className="grid gap-3">
+          {draft.items.map((item, index) => {
+            const quantityValue = Number(item.quantityAdded)
+            const unitCostValue = Number(item.unitCost)
+            const totalValue =
+              Number.isFinite(quantityValue) &&
+              quantityValue > 0 &&
+              Number.isFinite(unitCostValue) &&
+              unitCostValue >= 0
+                ? quantityValue * unitCostValue
+                : null
+
+            return (
+              <div
+                key={index}
+                className="grid gap-3 border border-border p-3 md:grid-cols-[minmax(0,1.6fr)_8rem_10rem_auto]"
+              >
+                <Field
+                  label="Product"
+                  error={errors[`items.${index}.productId`]}
+                >
+                  <SearchableValueSelect
+                    value={item.productId}
+                    options={productOptions}
+                    placeholder="Select product"
+                    searchPlaceholder="Search product"
+                    onChange={(value) =>
+                      onItemChange(index, "productId", value)
+                    }
+                  />
+                </Field>
+                <Field
+                  label="Qty received"
+                  error={errors[`items.${index}.quantityAdded`]}
+                >
+                  <Input
+                    value={item.quantityAdded}
+                    onChange={(event) =>
+                      onItemChange(index, "quantityAdded", event.target.value)
+                    }
+                  />
+                </Field>
+                <Field
+                  label="Unit cost"
+                  hint="Optional"
+                  error={errors[`items.${index}.unitCost`]}
+                >
+                  <Input
+                    value={item.unitCost}
+                    onChange={(event) =>
+                      onItemChange(index, "unitCost", event.target.value)
+                    }
+                  />
+                </Field>
+                <div className="grid gap-2 md:pt-[1.45rem]">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="justify-self-end"
+                    onClick={() => onRemoveItem(index)}
+                    disabled={draft.items.length === 1}
+                    aria-label={`Remove item ${index + 1}`}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                  <div className="text-right text-[11px] text-muted-foreground">
+                    {totalValue !== null
+                      ? `Total ${new Intl.NumberFormat("en-PH", {
+                          style: "currency",
+                          currency,
+                          minimumFractionDigits: 2,
+                        }).format(totalValue)}`
+                      : "Total pending"}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

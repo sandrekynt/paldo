@@ -124,10 +124,15 @@ export type DemoInventoryDrafts = {
     openingStock: string
     lowStockThreshold: string
   }
-  restock: {
-    quantityAdded: string
-    totalCost: string
+  stockIn: {
+    receivedAt: string
+    supplierName: string
     notes: string
+    items: Array<{
+      productId: string
+      quantityAdded: string
+      unitCost: string
+    }>
   }
   adjustment: {
     direction: "add" | "subtract"
@@ -194,7 +199,7 @@ export const demoInventoryUnits: DemoUnitRecord[] = inventoryUnitOptions.map(
 
 const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
   "paldo-1": {
-    headline: "Fast-moving grocery items with frequent low-stock checks and small-batch restocks.",
+    headline: "Fast-moving grocery items with frequent low-stock checks and compact batch stock-ins.",
     focusProductId: "mm-prod-2",
     categories: [
       {
@@ -564,10 +569,22 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         openingStock: "12",
         lowStockThreshold: "5",
       },
-      restock: {
-        quantityAdded: "36",
-        totalCost: "273.60",
+      stockIn: {
+        receivedAt: "2026-03-12",
+        supplierName: "Northstar Beverage Supply",
         notes: "Prep for weekend foot traffic and school dismissal rush.",
+        items: [
+          {
+            productId: "mm-prod-2",
+            quantityAdded: "24",
+            unitCost: "7.80",
+          },
+          {
+            productId: "mm-prod-4",
+            quantityAdded: "12",
+            unitCost: "20.40",
+          },
+        ],
       },
       adjustment: {
         direction: "subtract",
@@ -947,10 +964,22 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         openingStock: "10",
         lowStockThreshold: "4",
       },
-      restock: {
-        quantityAdded: "15",
-        totalCost: "262.50",
+      stockIn: {
+        receivedAt: "2026-03-11",
+        supplierName: "AquaParts Depot",
         notes: "Prepare extra refill capacity before Saturday village rounds.",
+        items: [
+          {
+            productId: "wr-prod-2",
+            quantityAdded: "8",
+            unitCost: "145.00",
+          },
+          {
+            productId: "wr-prod-3",
+            quantityAdded: "15",
+            unitCost: "7.50",
+          },
+        ],
       },
       adjustment: {
         direction: "subtract",
@@ -960,7 +989,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
     },
   },
   "paldo-3": {
-    headline: "Wholesale stock with higher unit costs, bulk restocks, and reserved archived SKUs.",
+    headline: "Wholesale stock with higher unit costs, batch stock-ins, and reserved archived SKUs.",
     focusProductId: "vt-prod-2",
     categories: [
       {
@@ -1345,10 +1374,22 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         openingStock: "18",
         lowStockThreshold: "8",
       },
-      restock: {
-        quantityAdded: "20",
-        totalCost: "1110.00",
+      stockIn: {
+        receivedAt: "2026-03-10",
+        supplierName: "Metro Build Source",
         notes: "Reserve incoming kilos for two contractor accounts on Friday pickup.",
+        items: [
+          {
+            productId: "vt-prod-2",
+            quantityAdded: "10",
+            unitCost: "55.50",
+          },
+          {
+            productId: "vt-prod-5",
+            quantityAdded: "10",
+            unitCost: "55.50",
+          },
+        ],
       },
       adjustment: {
         direction: "subtract",

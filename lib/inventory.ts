@@ -28,6 +28,19 @@ export type RestockDraft = {
   notes: string
 }
 
+export type StockInLineDraft = {
+  productId: string
+  quantityAdded: string
+  unitCost: string
+}
+
+export type StockInDraft = {
+  receivedAt: string
+  supplierName: string
+  notes: string
+  items: StockInLineDraft[]
+}
+
 export type AdjustmentDirection = "add" | "subtract"
 
 export type AdjustmentDraft = {
@@ -56,6 +69,23 @@ export function createEmptyRestockDraft(): RestockDraft {
     quantityAdded: "",
     totalCost: "",
     notes: "",
+  }
+}
+
+export function createEmptyStockInLineDraft(): StockInLineDraft {
+  return {
+    productId: "",
+    quantityAdded: "",
+    unitCost: "",
+  }
+}
+
+export function createEmptyStockInDraft(date = new Date()): StockInDraft {
+  return {
+    receivedAt: formatDateInputValue(date),
+    supplierName: "",
+    notes: "",
+    items: [createEmptyStockInLineDraft()],
   }
 }
 
@@ -212,4 +242,12 @@ function normalizeIdSegment(value: string) {
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
+}
+
+function formatDateInputValue(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+
+  return `${year}-${month}-${day}`
 }

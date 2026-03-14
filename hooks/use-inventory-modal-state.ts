@@ -6,14 +6,14 @@ import type { DemoProduct } from "@/lib/dummy-data"
 import {
   createEmptyAddProductDraft,
   createEmptyAdjustmentDraft,
-  createEmptyRestockDraft,
+  createEmptyStockInDraft,
   getDraftFromProduct,
   type AddProductDraft,
   type AdjustmentDraft,
   type FieldErrors,
   type OptionField,
   type ProductFormDraft,
-  type RestockDraft,
+  type StockInDraft,
 } from "@/lib/inventory"
 
 type OptionDialogState = {
@@ -45,13 +45,11 @@ export function useInventoryModalState() {
   const [editingProductId, setEditingProductId] = React.useState<string | null>(
     null
   )
-  const [restockProductId, setRestockProductId] = React.useState<string | null>(
-    null
+  const [stockInOpen, setStockInOpen] = React.useState(false)
+  const [stockInDraft, setStockInDraft] = React.useState<StockInDraft>(
+    createEmptyStockInDraft()
   )
-  const [restockDraft, setRestockDraft] = React.useState<RestockDraft>(
-    createEmptyRestockDraft()
-  )
-  const [restockErrors, setRestockErrors] = React.useState<FieldErrors>({})
+  const [stockInErrors, setStockInErrors] = React.useState<FieldErrors>({})
   const [adjustmentProductId, setAdjustmentProductId] = React.useState<
     string | null
   >(null)
@@ -71,10 +69,10 @@ export function useInventoryModalState() {
     setStockHistoryProductId(null)
   }
 
-  function closeRestockModal() {
-    setRestockProductId(null)
-    setRestockDraft(createEmptyRestockDraft())
-    setRestockErrors({})
+  function closeStockInModal() {
+    setStockInOpen(false)
+    setStockInDraft(createEmptyStockInDraft())
+    setStockInErrors({})
   }
 
   function closeAdjustmentModal() {
@@ -116,10 +114,15 @@ export function useInventoryModalState() {
     setEditErrors({})
   }
 
-  function openRestockModal(productId: string) {
-    setRestockProductId(productId)
-    setRestockDraft(createEmptyRestockDraft())
-    setRestockErrors({})
+  function handleStockInOpenChange(open: boolean) {
+    if (!open) {
+      closeStockInModal()
+      return
+    }
+
+    setStockInOpen(true)
+    setStockInDraft(createEmptyStockInDraft())
+    setStockInErrors({})
   }
 
   function openAdjustmentModal(productId: string) {
@@ -154,25 +157,25 @@ export function useInventoryModalState() {
     closeAdjustmentModal,
     closeEditModal,
     closeOptionDialog,
-    closeRestockModal,
+    closeStockInModal,
     closeStockHistoryModal,
     closeViewModal,
     editDraft,
     editErrors,
     editingProductId,
     handleAddProductOpenChange,
+    handleStockInOpenChange,
     openAdjustmentModal,
     openEditModal,
     openOptionDialog,
-    openRestockModal,
     openStockHistoryModal,
     openViewModal,
     optionDialog,
     optionDialogError,
     optionDialogValue,
-    restockDraft,
-    restockErrors,
-    restockProductId,
+    stockInDraft,
+    stockInErrors,
+    stockInOpen,
     setAddDraft,
     setAddErrors,
     setAddProductOpen,
@@ -187,9 +190,9 @@ export function useInventoryModalState() {
     setOptionDialogError,
     setOptionDialogValue,
     setOptionDialogValueWithReset,
-    setRestockDraft,
-    setRestockErrors,
-    setRestockProductId,
+    setStockInDraft,
+    setStockInErrors,
+    setStockInOpen,
     setStockHistoryProductId,
     setViewingProductId,
     stockHistoryProductId,

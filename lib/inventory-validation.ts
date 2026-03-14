@@ -9,6 +9,7 @@ import type {
   FieldErrors,
   ProductFormDraft,
   RestockDraft,
+  StockInDraft,
 } from "@/lib/inventory"
 
 function validateRequiredText(
@@ -92,8 +93,15 @@ export function validateProductDraft(
   return errors
 }
 
-export function validateRestockDraft(draft: RestockDraft) {
+export function validateRestockDraft(
+  draft: RestockDraft,
+  hasSelectedProduct = true
+) {
   const errors: FieldErrors = {}
+
+  if (!hasSelectedProduct) {
+    errors.productId = "Select a product"
+  }
 
   validatePositiveNumber(errors, "quantityAdded", draft.quantityAdded)
 
@@ -132,6 +140,49 @@ export function validateAdjustmentDraft(
   }
 
   validateRequiredText(errors, "notes", draft.notes)
+
+  return errors
+}
+
+export function validateStockInDraft(
+  draft: StockInDraft,
+  products: DemoProduct[]
+) {
+  const errors: FieldErrors = {}
+  const selectedProductIds = new Set<string>()
+
+  validateRequiredText(errors, "receivedAt", draft.receivedAt)
+
+  if (draft.items.length === 0) {
+    errors.items = "Add at least one product"
+    return errors
+  }
+
+  draft.items.forEach((item, index) => {
+    const productField = `items.${index}.productId`
+    const quantityField = `items.${index}.quantityAdded`
+    const unitCostField = `items.${index}.unitCost`
+
+    if (item.productId.trim().length === 0) {
+      errors[productField] = "Select a product"
+    } else if (!products.some((product) => product.id === item.productId)) {
+      errors[productField] = "Select a valid product"
+    } else if (selectedProductIds.has(item.productId)) {
+      errors[productField] = "Product already added"
+    } else {
+      selectedProductIds.add(item.productId)
+    }
+
+    validatePositiveNumber(errors, quantityField, item.quantityAdded)
+
+    if (item.unitCost.trim().length > 0) {
+      const unitCost = Number(item.unitCost)
+
+      if (!Number.isFinite(unitCost) || unitCost < 0) {
+        errors[unitCostField] = "Enter a valid price"
+      }
+    }
+  })
 
   return errors
 }

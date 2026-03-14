@@ -1,8 +1,6 @@
 "use client"
 
-import * as React from "react"
-import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
-import { Ellipsis, History, PackagePlus } from "lucide-react"
+import { History } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { DemoProduct, DemoStockMovement } from "@/lib/dummy-data"
@@ -60,19 +58,13 @@ export function InventoryProductDetailsContent({
   product,
   isMobile,
   currency,
-  onRestock,
   onViewHistory,
-  onAdjustment,
 }: {
   product: DemoProduct
   isMobile: boolean
   currency: string
-  onRestock: () => void
   onViewHistory: () => void
-  onAdjustment: () => void
 }) {
-  const [actionsOpen, setActionsOpen] = React.useState(false)
-
   return (
     <>
       <div
@@ -134,17 +126,9 @@ export function InventoryProductDetailsContent({
       <div
         className={cn(
           "grid gap-2 md:flex md:justify-end",
-          isMobile && "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start"
+          isMobile && "grid-cols-1"
         )}
       >
-        <Button
-          variant="outline"
-          className={cn(isMobile && "w-full")}
-          onClick={onRestock}
-        >
-          <PackagePlus className="size-3.5" />
-          Restock
-        </Button>
         <Button
           variant="outline"
           className={cn(isMobile && "w-full")}
@@ -153,45 +137,6 @@ export function InventoryProductDetailsContent({
           <History className="size-3.5" />
           Stock movement history
         </Button>
-        <PopoverPrimitive.Root
-          modal={false}
-          open={actionsOpen}
-          onOpenChange={setActionsOpen}
-        >
-          <PopoverPrimitive.Trigger
-            render={
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label={`More actions for ${product.name}`}
-              />
-            }
-          >
-            <Ellipsis className="size-3.5" />
-          </PopoverPrimitive.Trigger>
-          <PopoverPrimitive.Portal>
-            <PopoverPrimitive.Positioner
-              side="bottom"
-              align="end"
-              sideOffset={8}
-              collisionPadding={8}
-              className="z-70"
-            >
-              <PopoverPrimitive.Popup className="w-max border border-border bg-popover p-1 shadow-sm outline-none">
-                <button
-                  type="button"
-                  className="inline-flex h-8 cursor-pointer items-center justify-start px-2.5 text-left text-xs whitespace-nowrap hover:bg-muted"
-                  onClick={() => {
-                    setActionsOpen(false)
-                    onAdjustment()
-                  }}
-                >
-                  Adjust stock
-                </button>
-              </PopoverPrimitive.Popup>
-            </PopoverPrimitive.Positioner>
-          </PopoverPrimitive.Portal>
-        </PopoverPrimitive.Root>
       </div>
     </>
   )
