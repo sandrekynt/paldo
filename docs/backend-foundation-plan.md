@@ -123,7 +123,7 @@ db/
     categories.ts
     units.ts
     products.ts
-    restocks.ts
+    stock-ins.ts
     stock-movements.ts
     index.ts
   relations.ts
@@ -200,7 +200,7 @@ The current UI already implies these domain objects:
 - categories
 - units
 - products
-- restocks
+- stock ins
 - stock movements
 
 To support multiple businesses correctly, we also need:
@@ -341,7 +341,7 @@ Notes:
 - Keep `current_stock` denormalized for fast reads.
 - Stock movements remain the audit source of truth.
 
-### 7. restocks
+### 7. stock_ins
 
 Purpose:
 
@@ -386,14 +386,14 @@ Columns:
 
 Allowed `type` values for now:
 
-- `restock`
+- `stock_in`
 - `adjustment`
 - `sale`
 - `void`
 
 Allowed `reference_type` values for now:
 
-- `restock`
+- `stock_in`
 - `adjustment`
 - `sale`
 - `void`
@@ -405,14 +405,12 @@ Notes:
 - `reference_type` is better than a single ambiguous `reference_id`.
 - POS can later create `sale` and `void` movements without redesigning this
   table.
-- The UI label can stay `Stock in` while backend movement type stays `restock`
-  for inbound inventory.
 
 ## Audit Rules
 
 - Every stock change must create a `stock_movements` row.
 - Every stock-in line must create both:
-  - a `restocks` row
+  - a `stock_ins` row
   - a matching `stock_movements` row
 - Every adjust-stock action must create a `stock_movements` row with:
   - `type = adjustment`
@@ -451,7 +449,7 @@ Initial seed contents:
 - categories per business
 - units per business
 - products per business
-- restocks
+- stock ins
 - stock movements
 
 Seed strategy:

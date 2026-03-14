@@ -199,7 +199,6 @@ export function InventoryView({
               <StockInSheet
                 isMobile={isMobile}
                 open={stockInOpen}
-                currency={business.currency}
                 productOptions={stockInProductOptions}
                 draft={stockInDraft}
                 errors={stockInErrors}

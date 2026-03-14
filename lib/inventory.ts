@@ -22,12 +22,6 @@ export type AddProductDraft = ProductFormDraft & {
   openingStock: string
 }
 
-export type RestockDraft = {
-  quantityAdded: string
-  totalCost: string
-  notes: string
-}
-
 export type StockInLineDraft = {
   productId: string
   quantityAdded: string
@@ -61,14 +55,6 @@ export function createEmptyAddProductDraft(): AddProductDraft {
     sellingPrice: "",
     openingStock: "",
     lowStockThreshold: "",
-  }
-}
-
-export function createEmptyRestockDraft(): RestockDraft {
-  return {
-    quantityAdded: "",
-    totalCost: "",
-    notes: "",
   }
 }
 
@@ -115,8 +101,8 @@ export function formatDateTime(value: string) {
 }
 
 export function formatMovementType(type: DemoStockMovement["type"]) {
-  if (type === "restock") {
-    return "Restock"
+  if (type === "stock_in") {
+    return "Stock in"
   }
 
   if (type === "sale") {

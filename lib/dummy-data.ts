@@ -58,7 +58,7 @@ export type DemoStockMovement = {
   id: string
   productId: string
   businessId: string
-  type: "restock" | "sale" | "adjustment" | "void"
+  type: "stock_in" | "sale" | "adjustment" | "void"
   quantityChange: number
   stockBefore: number
   stockAfter: number
@@ -67,7 +67,7 @@ export type DemoStockMovement = {
   createdAt: string
 }
 
-export type DemoRestock = {
+export type DemoStockInEntry = {
   id: string
   productId: string
   businessId: string
@@ -148,7 +148,7 @@ export type DemoInventoryBusinessData = {
   units: DemoUnitRecord[]
   products: DemoProduct[]
   stockMovements: DemoStockMovement[]
-  restocks: DemoRestock[]
+  stockInEntries: DemoStockInEntry[]
   importSession: DemoInventoryImportSession
   drafts: DemoInventoryDrafts
 }
@@ -349,11 +349,11 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "mm-move-2",
         productId: "mm-prod-2",
         businessId: "paldo-1",
-        type: "restock",
+        type: "stock_in",
         quantityChange: 24,
         stockBefore: 11,
         stockAfter: 35,
-        referenceId: "restock-1004",
+        referenceId: "stock-in-1004",
         notes: "Delivered by Northstar Beverage Supply.",
         createdAt: "2026-03-10T15:30:00+08:00",
       },
@@ -406,9 +406,9 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         createdAt: "2026-03-12T10:55:00+08:00",
       },
     ],
-    restocks: [
+    stockInEntries: [
       {
-        id: "restock-1004",
+        id: "stock-in-1004",
         productId: "mm-prod-2",
         businessId: "paldo-1",
         quantityAdded: 24,
@@ -418,17 +418,17 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         createdAt: "2026-03-10T15:30:00+08:00",
       },
       {
-        id: "restock-1001",
+        id: "stock-in-1001",
         productId: "mm-prod-5",
         businessId: "paldo-1",
         quantityAdded: 50,
         costPerUnit: 42,
         totalCost: 2100,
-        notes: "Restocked after weekend market day.",
+        notes: "Received after weekend market day.",
         createdAt: "2026-03-08T06:40:00+08:00",
       },
       {
-        id: "restock-0998",
+        id: "stock-in-0998",
         productId: "mm-prod-3",
         businessId: "paldo-1",
         quantityAdded: 20,
@@ -744,11 +744,11 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "wr-move-2",
         productId: "wr-prod-1",
         businessId: "paldo-2",
-        type: "restock",
+        type: "stock_in",
         quantityChange: 20,
         stockBefore: 13,
         stockAfter: 33,
-        referenceId: "restock-2004",
+        referenceId: "stock-in-2004",
         notes: "Fresh processed batch released to dispatch.",
         createdAt: "2026-03-11T18:40:00+08:00",
       },
@@ -801,9 +801,9 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         createdAt: "2026-03-12T10:05:00+08:00",
       },
     ],
-    restocks: [
+    stockInEntries: [
       {
-        id: "restock-2004",
+        id: "stock-in-2004",
         productId: "wr-prod-1",
         businessId: "paldo-2",
         quantityAdded: 20,
@@ -813,7 +813,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         createdAt: "2026-03-11T18:40:00+08:00",
       },
       {
-        id: "restock-2002",
+        id: "stock-in-2002",
         productId: "wr-prod-4",
         businessId: "paldo-2",
         quantityAdded: 6,
@@ -823,7 +823,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         createdAt: "2026-03-09T10:35:00+08:00",
       },
       {
-        id: "restock-1999",
+        id: "stock-in-1999",
         productId: "wr-prod-5",
         businessId: "paldo-2",
         quantityAdded: 8,
@@ -1139,11 +1139,11 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         id: "vt-move-2",
         productId: "vt-prod-2",
         businessId: "paldo-3",
-        type: "restock",
+        type: "stock_in",
         quantityChange: 15,
         stockBefore: 5,
         stockAfter: 20,
-        referenceId: "restock-3003",
+        referenceId: "stock-in-3003",
         notes: "Bulk reel split into selling kilos.",
         createdAt: "2026-03-09T14:25:00+08:00",
       },
@@ -1196,9 +1196,9 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         createdAt: "2026-03-12T11:15:00+08:00",
       },
     ],
-    restocks: [
+    stockInEntries: [
       {
-        id: "restock-3003",
+        id: "stock-in-3003",
         productId: "vt-prod-2",
         businessId: "paldo-3",
         quantityAdded: 15,
@@ -1208,7 +1208,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         createdAt: "2026-03-09T14:25:00+08:00",
       },
       {
-        id: "restock-3001",
+        id: "stock-in-3001",
         productId: "vt-prod-1",
         businessId: "paldo-3",
         quantityAdded: 40,
@@ -1218,7 +1218,7 @@ const inventoryDemoByBusiness: Record<string, DemoInventoryBusinessData> = {
         createdAt: "2026-03-08T07:35:00+08:00",
       },
       {
-        id: "restock-2998",
+        id: "stock-in-2998",
         productId: "vt-prod-4",
         businessId: "paldo-3",
         quantityAdded: 12,

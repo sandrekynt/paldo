@@ -225,7 +225,6 @@ export function StockMovementHistorySheet({
 export function StockInSheet({
   isMobile,
   open,
-  currency,
   productOptions,
   draft,
   errors,
@@ -238,7 +237,6 @@ export function StockInSheet({
 }: {
   isMobile: boolean
   open: boolean
-  currency: string
   productOptions: {
     id: string
     label: string
@@ -276,7 +274,6 @@ export function StockInSheet({
           <StockInForm
             draft={draft}
             errors={errors}
-            currency={currency}
             productOptions={productOptions}
             onDraftChange={onDraftChange}
             onItemChange={onItemChange}

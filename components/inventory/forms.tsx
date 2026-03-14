@@ -28,7 +28,6 @@ import {
   type AdjustmentDraft,
   type FieldErrors,
   type ProductFormDraft,
-  type RestockDraft,
   type StockInDraft,
 } from "@/lib/inventory"
 import { cn } from "@/lib/utils"
@@ -718,50 +717,9 @@ export function ProductForm({
   )
 }
 
-export function RestockForm({
-  draft,
-  errors,
-  onChange,
-}: {
-  draft: RestockDraft
-  errors: FieldErrors
-  onChange: (field: keyof RestockDraft, value: string) => void
-}) {
-  return (
-    <div className="grid gap-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Quantity added" error={errors.quantityAdded}>
-          <Input
-            value={draft.quantityAdded}
-            onChange={(event) => onChange("quantityAdded", event.target.value)}
-          />
-        </Field>
-        <Field label="Total cost" hint="Optional" error={errors.totalCost}>
-          <Input
-            value={draft.totalCost}
-            onChange={(event) => onChange("totalCost", event.target.value)}
-          />
-        </Field>
-        <Field
-          label="Notes"
-          hint="Optional"
-          error={errors.notes}
-          className="md:col-span-2"
-        >
-          <Input
-            value={draft.notes}
-            onChange={(event) => onChange("notes", event.target.value)}
-          />
-        </Field>
-      </div>
-    </div>
-  )
-}
-
 export function StockInForm({
   draft,
   errors,
-  currency,
   productOptions,
   onDraftChange,
   onItemChange,
@@ -770,7 +728,6 @@ export function StockInForm({
 }: {
   draft: StockInDraft
   errors: FieldErrors
-  currency: string
   productOptions: SelectOption[]
   onDraftChange: (
     field: "receivedAt" | "supplierName" | "notes",
@@ -834,16 +791,6 @@ export function StockInForm({
 
         <div className="grid gap-3">
           {draft.items.map((item, index) => {
-            const quantityValue = Number(item.quantityAdded)
-            const unitCostValue = Number(item.unitCost)
-            const totalValue =
-              Number.isFinite(quantityValue) &&
-              quantityValue > 0 &&
-              Number.isFinite(unitCostValue) &&
-              unitCostValue >= 0
-                ? quantityValue * unitCostValue
-                : null
-
             return (
               <div
                 key={index}
@@ -886,7 +833,7 @@ export function StockInForm({
                     }
                   />
                 </Field>
-                <div className="grid gap-2 md:pt-[1.45rem]">
+                <div className="grid md:pt-[1.45rem]">
                   <Button
                     type="button"
                     variant="ghost"
@@ -898,15 +845,6 @@ export function StockInForm({
                   >
                     <X className="size-4" />
                   </Button>
-                  <div className="text-right text-[11px] text-muted-foreground">
-                    {totalValue !== null
-                      ? `Total ${new Intl.NumberFormat("en-PH", {
-                          style: "currency",
-                          currency,
-                          minimumFractionDigits: 2,
-                        }).format(totalValue)}`
-                      : "Total pending"}
-                  </div>
                 </div>
               </div>
             )

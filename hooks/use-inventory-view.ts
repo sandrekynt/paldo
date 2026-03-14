@@ -10,7 +10,7 @@ import {
   getInventoryDemo,
   type DemoCategory,
   type DemoProduct,
-  type DemoRestock,
+  type DemoStockInEntry,
   type DemoStockMovement,
   type DemoUnitRecord,
 } from "@/lib/dummy-data"
@@ -51,8 +51,8 @@ export function useInventoryView(selectedBusinessId: string) {
   const [products, setProducts] = React.useState<DemoProduct[]>(
     inventory.products
   )
-  const [, setRestockEntries] = React.useState<DemoRestock[]>(
-    inventory.restocks
+  const [, setStockInEntries] = React.useState<DemoStockInEntry[]>(
+    inventory.stockInEntries
   )
   const [stockMovements, setStockMovements] = React.useState<
     DemoStockMovement[]
@@ -155,7 +155,7 @@ export function useInventoryView(selectedBusinessId: string) {
     setAddDraft(createEmptyAddProductDraft())
     setAddErrors({})
     setProducts(inventory.products)
-    setRestockEntries(inventory.restocks)
+    setStockInEntries(inventory.stockInEntries)
     setStockMovements(inventory.stockMovements)
     setCategories(inventory.categories)
     setUnits(inventory.units)
@@ -384,7 +384,7 @@ export function useInventoryView(selectedBusinessId: string) {
     const notes = stockInDraft.notes.trim()
     const nextProducts = new Map(products.map((product) => [product.id, product]))
     const nextMovements: DemoStockMovement[] = []
-    const nextRestocks: DemoRestock[] = []
+    const nextStockInEntries: DemoStockInEntry[] = []
 
     for (const [index, item] of stockInDraft.items.entries()) {
       const product = nextProducts.get(item.productId)
@@ -424,7 +424,7 @@ export function useInventoryView(selectedBusinessId: string) {
         id: `move-${lineSuffix}`,
         productId: product.id,
         businessId: business.id,
-        type: "restock",
+        type: "stock_in",
         quantityChange: quantityAdded,
         stockBefore,
         stockAfter,
@@ -433,7 +433,7 @@ export function useInventoryView(selectedBusinessId: string) {
           movementNotes.length > 0 ? movementNotes : "Stock received through batch stock in.",
         createdAt,
       })
-      nextRestocks.push({
+      nextStockInEntries.push({
         id: referenceId,
         productId: product.id,
         businessId: business.id,
@@ -447,7 +447,7 @@ export function useInventoryView(selectedBusinessId: string) {
 
     setProducts(Array.from(nextProducts.values()))
     setStockMovements((current) => [...nextMovements.reverse(), ...current])
-    setRestockEntries((current) => [...nextRestocks.reverse(), ...current])
+    setStockInEntries((current) => [...nextStockInEntries.reverse(), ...current])
     closeStockInModal()
   }
 

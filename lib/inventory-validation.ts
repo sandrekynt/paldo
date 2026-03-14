@@ -8,7 +8,6 @@ import type {
   AdjustmentDraft,
   FieldErrors,
   ProductFormDraft,
-  RestockDraft,
   StockInDraft,
 } from "@/lib/inventory"
 
@@ -88,29 +87,6 @@ export function validateProductDraft(
       draft.openingStock,
       "quantity"
     )
-  }
-
-  return errors
-}
-
-export function validateRestockDraft(
-  draft: RestockDraft,
-  hasSelectedProduct = true
-) {
-  const errors: FieldErrors = {}
-
-  if (!hasSelectedProduct) {
-    errors.productId = "Select a product"
-  }
-
-  validatePositiveNumber(errors, "quantityAdded", draft.quantityAdded)
-
-  if (draft.totalCost.trim().length > 0) {
-    const totalCost = Number(draft.totalCost)
-
-    if (!Number.isFinite(totalCost) || totalCost < 0) {
-      errors.totalCost = "Enter a valid amount"
-    }
   }
 
   return errors
