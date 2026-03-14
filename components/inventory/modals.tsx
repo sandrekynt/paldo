@@ -266,7 +266,7 @@ export function StockInSheet({
         side={isMobile ? "bottom" : "center"}
         className={getSheetClassName(
           isMobile,
-          "rounded-none data-[side=center]:!w-[50vw] data-[side=center]:!max-w-[50vw]"
+          "rounded-none data-[side=center]:max-w-4xl"
         )}
       >
         <SheetHeader className="border-b">
